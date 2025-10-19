@@ -1,0 +1,778 @@
+# Product Requirements Document: AI-Powered Note Taking App
+
+**Version:** 1.0  
+**Date:** October 19, 2025  
+**Status:** Ready for Implementation
+
+---
+
+## 1. Executive Summary
+
+A cross-platform note-taking application (web, iOS, Android) that replaces Simplenote with enhanced AI capabilities. Users can create notes via voice or keyboard, organize with tags, and leverage AI Profiles for automated content processing based on tag assignments.
+
+### Key Differentiators
+- Voice-to-text note creation using OpenAI Whisper API
+- AI Profile system with custom prompts triggered by tags
+- Full offline-first architecture with real-time sync
+- Support for multiple AI providers (OpenAI, Claude)
+- Unified codebase for web and mobile platforms
+
+---
+
+## 2. Technical Architecture
+
+### Tech Stack
+- **Frontend**: Next.js 14+ (App Router)
+- **Mobile**: Capacitor for iOS/Android wrapper
+- **Backend**: Supabase (PostgreSQL, Auth, Real-time)
+- **Hosting**: Vercel (web), App stores (mobile)
+- **AI Services**: OpenAI Whisper, OpenAI GPT, Anthropic Claude (user API keys)
+
+### Architecture Pattern
+```
+┌─────────────────────────────────────────────┐
+│           Next.js Frontend (Web)            │
+│                                             │
+│  ┌──────────────────────────────────────┐  │
+│  │   Capacitor (iOS/Android Wrapper)    │  │
+│  └──────────────────────────────────────┘  │
+└─────────────────┬───────────────────────────┘
+                  │
+                  ├─── Supabase (Auth, DB, Real-time)
+                  │
+                  ├─── OpenAI API (Whisper, GPT)
+                  │
+                  └─── Anthropic API (Claude)
+```
+
+### Data Flow
+1. **Offline-First**: Local IndexedDB/SQLite for offline storage
+2. **Sync Engine**: Background sync with Supabase on connectivity
+3. **Conflict Resolution**: Last-write-wins with version history fallback
+4. **Real-time**: Supabase real-time subscriptions for cross-device sync
+
+---
+
+## 3. Core Features
+
+### 3.1 Note Creation & Editing
+
+#### Input Methods
+- **Keyboard Input**: Standard text editor
+- **Voice Input**: 
+  - Integration: OpenAI Whisper API
+  - Behavior: Record → Transcribe → Display as text
+  - Cost: ~$0.006/minute (user's API key)
+  - Voice used only for initial note creation (not editing)
+
+#### Text Format
+- **Markdown Support**: Simple syntax for formatting
+  - Bold: `**text**`
+  - Italic: `*text*`
+  - Headers: `# H1`, `## H2`, etc.
+  - Lists: `-` or `1.`
+  - Code blocks: ` ``` `
+  - Links: `[text](url)`
+- **Editor**: Markdown editor with live preview option
+- **Note Size**: Max 1MB per note (Simplenote equivalent)
+
+#### Note Properties
+- Title (optional, auto-generated from first line if empty)
+- Body (markdown text)
+- Tags (max 5 per note)
+- Created timestamp
+- Modified timestamp
+- Sync status (synced, pending, conflict)
+
+### 3.2 Tagging System
+
+#### Tag Structure
+- **Flat hierarchy**: Single-level tags (e.g., `#work`, `#youtube`, `#ideas`)
+- **Max tags per note**: 5
+- **Tag creation**: Create tags inline while editing notes
+- **Auto-tagging**: AI-powered tag suggestions based on:
+  - Note content analysis
+  - Existing tags in system
+  - User's tagging patterns
+  - Max 3 auto-suggested tags per note
+
+#### Tag Management
+- View all tags in sidebar
+- Filter notes by single or multiple tags
+- Rename tags globally
+- Delete tags (removes from all notes)
+- Tag usage count display
+
+### 3.3 AI Profiles
+
+#### Overview
+AI Profiles are user-configured automation rules that execute AI prompts when specific tags are applied to notes.
+
+#### Profile Configuration (Settings Page)
+Each AI Profile contains:
+- **Profile Name**: User-defined (e.g., "YouTube Script Analyzer")
+- **Associated Tag**: Single tag trigger (e.g., `#youtube`)
+- **AI Provider**: OpenAI or Claude (user selection)
+- **Model**: Specific model (e.g., GPT-4, Claude Sonnet 4.5)
+- **System Prompt**: Context/instructions for AI
+- **User Prompt Template**: Dynamic prompt with variables:
+  - `{note_title}`: Note title
+  - `{note_content}`: Full note body
+  - `{tags}`: Comma-separated tag list
+- **Trigger Mode**: Automatic or Manual
+- **Output Behavior**: 
+  - Append to original note
+  - Create new note (with custom title template)
+  - Replace note content
+- **Status**: Active/Inactive
+
+#### Profile Execution
+- **Automatic Mode**: Triggers when tag is added to note
+- **Manual Mode**: User clicks "Run AI Profile" button on note
+- **Reusability**: Same profile runs on all notes with matching tag
+- **Execution Log**: Track when profiles run, tokens used, errors
+
+#### Example AI Profile
+```yaml
+Profile Name: YouTube Video Summarizer
+Tag: #youtube
+AI Provider: OpenAI
+Model: GPT-4o
+System Prompt: "You are a YouTube content analyst. Extract key points and create a structured summary."
+User Prompt: "Analyze this YouTube video idea: {note_content}. Provide: 1) Hook, 2) Key Points, 3) Call-to-action"
+Trigger: Automatic
+Output: Create new note titled "Summary: {note_title}"
+```
+
+### 3.4 Search & Discovery
+
+#### Search Capabilities
+- **Full-text search**: Search across all note content
+- **Tag filtering**: Multi-tag AND/OR filtering
+- **Search scope**: Title + body + tags
+- **Search features**:
+  - Instant search (as-you-type)
+  - Highlight search terms in results
+  - Recent searches saved
+  - Search within tag filter
+- **Search UI**: Prominent search bar, keyboard shortcut (Cmd/Ctrl + K)
+- **Performance**: Indexed search for <100ms response time
+
+#### Note Organization
+- **Default view**: All notes, sorted by modified date (newest first)
+- **Filter views**:
+  - All notes
+  - Untagged notes
+  - Favorites (starred notes)
+  - Recently edited
+  - By specific tag(s)
+- **Sorting options**:
+  - Modified date
+  - Created date
+  - Alphabetical
+
+### 3.5 Sharing
+
+#### Email Sharing
+- **Share button**: On each note
+- **Email format**:
+  - **Subject**: Note title
+  - **Body**: Full note content (markdown rendered as HTML)
+  - **Attachment**: `.md` file with note content
+- **Recipient**: User enters email address(es)
+- **Access**: Read-only (MVP scope)
+- **No account required**: Recipients view via email only
+
+#### Future Sharing Features (Post-MVP)
+- Shareable links
+- Collaborative editing
+- Public note URLs
+
+### 3.6 Sync & Offline
+
+#### Offline Mode
+- **Full offline capability**: Create, edit, delete notes without internet
+- **Local storage**: IndexedDB (web), SQLite (mobile via Capacitor)
+- **Queue system**: Track pending sync operations
+- **Sync indicator**: Visual status (synced, syncing, offline, conflict)
+
+#### Sync Strategy
+- **Trigger events**:
+  - Note save (debounced 2 seconds)
+  - Tag change
+  - App foreground/background
+  - Manual sync button
+- **Bidirectional sync**: Local ↔ Supabase
+- **Real-time updates**: Supabase real-time subscriptions for instant cross-device sync
+
+#### Conflict Resolution
+- **Strategy**: Last-write-wins (LWW) based on timestamp
+- **Conflict detection**: Compare local and remote timestamps
+- **Conflict UI**:
+  - Show conflict indicator on note
+  - "View Previous Version" option
+  - Manual merge option (copy/paste from old version)
+- **Version history**: Keep last 5 versions of each note
+
+---
+
+## 4. User Interface & Experience
+
+### 4.1 Core Screens
+
+#### Home Screen (Note List)
+```
+┌──────────────────────────────────────┐
+│ [Search...        ] [+ New Note] [☰] │
+├──────────────────────────────────────┤
+│ Filters: All | Tags | Favorites      │
+├──────────────────────────────────────┤
+│ ┌────────────────────────────────┐   │
+│ │ Note Title                     │   │
+│ │ First line preview... #tag1    │   │
+│ │ 2 hours ago                    │   │
+│ └────────────────────────────────┘   │
+│ ┌────────────────────────────────┐   │
+│ │ Another Note                   │   │
+│ │ Preview text... #tag2 #tag3    │   │
+│ │ Yesterday                      │   │
+│ └────────────────────────────────┘   │
+└──────────────────────────────────────┘
+```
+
+#### Note Editor
+```
+┌──────────────────────────────────────┐
+│ [< Back] [Share] [🎤 Voice] [⋮ More] │
+├──────────────────────────────────────┤
+│ Title (optional)                     │
+├──────────────────────────────────────┤
+│ # Note content in markdown           │
+│                                      │
+│ - Point one                          │
+│ - Point two                          │
+│                                      │
+│ **Bold text** and *italic*           │
+├──────────────────────────────────────┤
+│ Tags: #work #project [+ Add Tag]     │
+│ [Run AI Profile] (if profile exists) │
+├──────────────────────────────────────┤
+│ Modified: 5 mins ago | ✓ Synced      │
+└──────────────────────────────────────┘
+```
+
+#### Settings Screen
+```
+┌──────────────────────────────────────┐
+│ Settings                             │
+├──────────────────────────────────────┤
+│ Account                              │
+│   - Email: user@example.com          │
+│   - Change password                  │
+│   - Sign out                         │
+├──────────────────────────────────────┤
+│ AI Configuration                     │
+│   - OpenAI API Key: [••••••]         │
+│   - Claude API Key: [••••••]         │
+│   - Default AI Provider: OpenAI      │
+├──────────────────────────────────────┤
+│ AI Profiles                          │
+│   - Manage Profiles (5) →            │
+│   - Create New Profile               │
+├──────────────────────────────────────┤
+│ App Settings                         │
+│   - Enable auto-tagging: ☑           │
+│   - Default sort: Modified date      │
+│   - Theme: Auto / Light / Dark       │
+├──────────────────────────────────────┤
+│ Storage                              │
+│   - Notes: 127 | Size: 2.4 MB        │
+│   - Clear cache                      │
+│   - Export all notes                 │
+└──────────────────────────────────────┘
+```
+
+#### AI Profile Editor
+```
+┌──────────────────────────────────────┐
+│ Create AI Profile                    │
+├──────────────────────────────────────┤
+│ Profile Name:                        │
+│ [YouTube Summarizer____________]     │
+│                                      │
+│ Tag Trigger:                         │
+│ [#youtube▼]                          │
+│                                      │
+│ AI Provider:                         │
+│ ⦿ OpenAI  ○ Claude                   │
+│                                      │
+│ Model: [GPT-4o▼]                     │
+│                                      │
+│ System Prompt:                       │
+│ ┌────────────────────────────────┐   │
+│ │You are a YouTube content       │   │
+│ │analyst...                      │   │
+│ └────────────────────────────────┘   │
+│                                      │
+│ User Prompt Template:                │
+│ ┌────────────────────────────────┐   │
+│ │Analyze: {note_content}         │   │
+│ │Provide summary...              │   │
+│ └────────────────────────────────┘   │
+│                                      │
+│ Trigger: ⦿ Automatic  ○ Manual       │
+│                                      │
+│ Output: ⦿ New note  ○ Append         │
+│         ○ Replace content            │
+│                                      │
+│ New note title: [Summary: {title}]   │
+│                                      │
+│ Status: ☑ Active                     │
+│                                      │
+│ [Cancel]  [Save Profile]             │
+└──────────────────────────────────────┘
+```
+
+### 4.2 Key Interactions
+
+#### Voice Note Creation
+1. User taps "🎤 Voice" button
+2. Recording UI appears with waveform animation
+3. User speaks, taps stop
+4. "Transcribing..." loading state
+5. Transcribed text populates note editor
+6. User can edit/tag/save
+
+#### Tag Auto-suggestion
+1. User finishes typing note content
+2. After 2-second pause, "✨ Suggested tags" appears
+3. Shows 1-3 relevant tags
+4. User taps to add, or dismiss
+
+#### AI Profile Execution (Automatic)
+1. User adds `#youtube` tag to note
+2. Matching AI Profile detected
+3. Toast: "Running YouTube Summarizer..."
+4. Progress indicator
+5. On completion:
+   - New note created (or content appended)
+   - Toast: "AI Profile complete! ✓"
+   - Link to view result
+
+#### Conflict Resolution
+1. Sync detects conflict
+2. Banner: "⚠ Conflict detected on [Note Title]"
+3. User taps banner
+4. Side-by-side comparison:
+   - Your version (local)
+   - Server version (remote)
+5. Options:
+   - Keep local
+   - Keep server
+   - View previous version
+   - Manually merge
+
+---
+
+## 5. Data Schema
+
+### Database Tables (Supabase/PostgreSQL)
+
+#### `users`
+```sql
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email TEXT UNIQUE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### `notes`
+```sql
+CREATE TABLE notes (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  title TEXT,
+  content TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  deleted_at TIMESTAMPTZ,
+  is_favorite BOOLEAN DEFAULT FALSE,
+  sync_version INTEGER DEFAULT 1,
+  CONSTRAINT notes_size_check CHECK (LENGTH(content) <= 1048576)
+);
+
+CREATE INDEX idx_notes_user_id ON notes(user_id);
+CREATE INDEX idx_notes_updated_at ON notes(updated_at DESC);
+CREATE INDEX idx_notes_deleted_at ON notes(deleted_at) WHERE deleted_at IS NULL;
+```
+
+#### `tags`
+```sql
+CREATE TABLE tags (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, name)
+);
+
+CREATE INDEX idx_tags_user_id ON tags(user_id);
+```
+
+#### `note_tags`
+```sql
+CREATE TABLE note_tags (
+  note_id UUID REFERENCES notes(id) ON DELETE CASCADE,
+  tag_id UUID REFERENCES tags(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (note_id, tag_id)
+);
+
+CREATE INDEX idx_note_tags_note_id ON note_tags(note_id);
+CREATE INDEX idx_note_tags_tag_id ON note_tags(tag_id);
+```
+
+#### `ai_profiles`
+```sql
+CREATE TABLE ai_profiles (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  tag_id UUID REFERENCES tags(id) ON DELETE CASCADE,
+  ai_provider TEXT NOT NULL CHECK (ai_provider IN ('openai', 'claude')),
+  model TEXT NOT NULL,
+  system_prompt TEXT NOT NULL,
+  user_prompt_template TEXT NOT NULL,
+  trigger_mode TEXT NOT NULL CHECK (trigger_mode IN ('automatic', 'manual')),
+  output_behavior TEXT NOT NULL CHECK (output_behavior IN ('append', 'new_note', 'replace')),
+  output_title_template TEXT,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, tag_id)
+);
+
+CREATE INDEX idx_ai_profiles_user_id ON ai_profiles(user_id);
+CREATE INDEX idx_ai_profiles_tag_id ON ai_profiles(tag_id);
+```
+
+#### `ai_executions`
+```sql
+CREATE TABLE ai_executions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  profile_id UUID REFERENCES ai_profiles(id) ON DELETE SET NULL,
+  note_id UUID REFERENCES notes(id) ON DELETE CASCADE,
+  ai_provider TEXT NOT NULL,
+  model TEXT NOT NULL,
+  tokens_used INTEGER,
+  execution_time_ms INTEGER,
+  status TEXT NOT NULL CHECK (status IN ('success', 'failed')),
+  error_message TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_ai_executions_user_id ON ai_executions(user_id);
+CREATE INDEX idx_ai_executions_note_id ON ai_executions(note_id);
+```
+
+#### `user_settings`
+```sql
+CREATE TABLE user_settings (
+  user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  openai_api_key TEXT,
+  claude_api_key TEXT,
+  default_ai_provider TEXT CHECK (default_ai_provider IN ('openai', 'claude')),
+  enable_auto_tagging BOOLEAN DEFAULT TRUE,
+  default_sort TEXT DEFAULT 'modified_desc',
+  theme TEXT DEFAULT 'auto' CHECK (theme IN ('auto', 'light', 'dark')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### `note_versions` (Conflict Resolution)
+```sql
+CREATE TABLE note_versions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  note_id UUID REFERENCES notes(id) ON DELETE CASCADE,
+  title TEXT,
+  content TEXT NOT NULL,
+  version_number INTEGER NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_note_versions_note_id ON note_versions(note_id);
+```
+
+---
+
+## 6. API Endpoints
+
+### Authentication
+- `POST /api/auth/signup` - Register new user
+- `POST /api/auth/login` - User login
+- `POST /api/auth/logout` - User logout
+- `GET /api/auth/user` - Get current user
+
+### Notes
+- `GET /api/notes` - List all notes (with filters, pagination)
+- `GET /api/notes/:id` - Get single note
+- `POST /api/notes` - Create note
+- `PUT /api/notes/:id` - Update note
+- `DELETE /api/notes/:id` - Soft delete note
+- `POST /api/notes/sync` - Batch sync notes (offline → online)
+
+### Tags
+- `GET /api/tags` - List all user tags
+- `POST /api/tags` - Create tag
+- `PUT /api/tags/:id` - Rename tag
+- `DELETE /api/tags/:id` - Delete tag
+- `POST /api/notes/:id/tags` - Add tags to note
+- `DELETE /api/notes/:id/tags/:tagId` - Remove tag from note
+
+### AI
+- `POST /api/ai/transcribe` - Transcribe audio (Whisper)
+- `POST /api/ai/suggest-tags` - Get AI tag suggestions
+- `POST /api/ai/execute-profile` - Execute AI Profile on note
+
+### AI Profiles
+- `GET /api/ai-profiles` - List all profiles
+- `GET /api/ai-profiles/:id` - Get single profile
+- `POST /api/ai-profiles` - Create profile
+- `PUT /api/ai-profiles/:id` - Update profile
+- `DELETE /api/ai-profiles/:id` - Delete profile
+
+### Sharing
+- `POST /api/share/email` - Share note via email
+
+### Search
+- `GET /api/search?q={query}&tags={tagIds}` - Search notes
+
+### Settings
+- `GET /api/settings` - Get user settings
+- `PUT /api/settings` - Update user settings
+
+---
+
+## 7. Security & Privacy
+
+### Authentication
+- Supabase Auth (email/password)
+- Future: Google OAuth
+- JWT tokens for API authentication
+- Refresh token rotation
+
+### Data Security
+- All API keys encrypted at rest (AES-256)
+- User API keys never logged or exposed
+- HTTPS only for all connections
+- Row Level Security (RLS) in Supabase:
+  - Users can only access their own notes/tags/profiles
+  - All tables have RLS policies enforced
+
+### Privacy
+- No AI training on user data (OpenAI/Claude zero retention)
+- User owns all note data
+- Optional data export (JSON format)
+- Account deletion removes all user data (GDPR compliant)
+
+---
+
+## 8. Performance Requirements
+
+### Response Times
+- Note list load: <500ms
+- Single note load: <200ms
+- Search results: <100ms (indexed)
+- Sync operation: <2s for 100 notes
+- AI Profile execution: Depends on provider API (~2-10s)
+
+### Scalability
+- Support 10,000+ notes per user
+- Handle 100+ tags per user
+- 20+ AI Profiles per user
+- Concurrent device sync (3+ devices)
+
+### Offline Performance
+- All CRUD operations work offline
+- Local search remains <100ms
+- Background sync queue handles 1000+ pending operations
+
+---
+
+## 9. Development Phases
+
+### Phase 1: MVP (8-10 weeks)
+**Core Features**
+- User authentication (email/password)
+- CRUD notes (keyboard input only)
+- Markdown editor
+- Tag system (manual tagging)
+- Basic search (full-text)
+- Offline sync
+- Web app deployment
+
+**Deliverable**: Functional web app on Vercel
+
+### Phase 2: Mobile & Voice (4-6 weeks)
+**Features**
+- Capacitor mobile builds (iOS/Android)
+- Voice transcription (Whisper API)
+- Mobile-optimized UI
+- App store submission
+
+**Deliverable**: iOS/Android apps in stores
+
+### Phase 3: AI Integration (4-6 weeks)
+**Features**
+- AI Profile system
+- Auto-tagging
+- OpenAI & Claude integration
+- AI execution logging
+- Settings for API keys
+
+**Deliverable**: Full AI-powered features
+
+### Phase 4: Sharing & Polish (2-4 weeks)
+**Features**
+- Email sharing
+- Conflict resolution UI
+- Advanced search filters
+- Performance optimizations
+- Bug fixes & UX improvements
+
+**Deliverable**: Production-ready v1.0
+
+### Phase 5: Future Enhancements (Post-Launch)
+- Google OAuth
+- Shareable links (public/private)
+- Collaborative editing
+- Rich media attachments (images)
+- Desktop apps (Electron)
+- Browser extensions
+- API for third-party integrations
+
+---
+
+## 10. Technical Considerations
+
+### Capacitor Integration
+- **Plugins needed**:
+  - `@capacitor/filesystem` - Offline storage
+  - `@capacitor/network` - Network status
+  - `@capacitor/haptics` - Touch feedback
+  - `@capacitor-community/sqlite` - Local database
+  - `@capacitor/voice-recorder` - Audio recording
+
+### State Management
+- **Recommendation**: Zustand or Jotai (lightweight)
+- **Store structure**:
+  - Notes store (CRUD, sync queue)
+  - Tags store
+  - UI store (search, filters)
+  - Settings store
+  - Sync store (status, conflicts)
+
+### Sync Architecture
+```javascript
+// Simplified sync flow
+1. Local change → Add to sync queue
+2. Network available → Process queue
+3. For each queued item:
+   a. Send to Supabase
+   b. Check timestamp conflicts
+   c. Resolve with LWW or flag conflict
+   d. Update local with remote changes
+4. Listen to Supabase real-time for remote changes
+5. Merge remote → local (if no conflict)
+```
+
+### Error Handling
+- Network errors: Queue for retry
+- API key errors: Show user-friendly message in settings
+- AI API errors: Log execution failure, notify user
+- Sync conflicts: Non-blocking UI with resolution option
+
+### Testing Strategy
+- Unit tests: Business logic, utilities
+- Integration tests: API endpoints, sync logic
+- E2E tests: Critical user flows (Playwright)
+- Mobile testing: iOS Simulator, Android Emulator
+- Manual testing: Real devices, offline scenarios
+
+---
+
+## 11. Success Metrics
+
+### User Engagement
+- Daily active users (DAU)
+- Notes created per user per week
+- Voice vs keyboard input ratio
+- Tag usage (% of notes tagged)
+
+### AI Features
+- AI Profile usage rate
+- Most popular AI Profiles
+- AI execution success rate
+- Average tokens per execution
+
+### Performance
+- App crash rate (<0.1%)
+- Sync success rate (>99.9%)
+- Average sync time
+- Search response time
+
+### Growth
+- New user signups
+- User retention (D1, D7, D30)
+- App store ratings
+- Feature requests/feedback
+
+---
+
+## 12. Risks & Mitigations
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| AI API costs too high for users | High | Provide cost estimates, usage tracking, limits |
+| Sync conflicts too frequent | Medium | Implement robust LWW + manual resolution |
+| Offline storage limits (mobile) | Medium | Implement note archiving, cloud-only notes |
+| Voice transcription accuracy issues | Medium | Allow immediate editing, support multiple languages |
+| Supabase vendor lock-in | Low | Abstract database layer for future migration |
+| Mobile app rejection | Medium | Follow app store guidelines strictly |
+
+---
+
+## 13. Open Questions for Claude Code
+
+1. **Markdown editor library**: Use `react-markdown` + `react-simplemde-editor` or build custom?
+2. **Mobile voice recording**: Native Capacitor plugin vs. web Audio API?
+3. **Offline storage size limits**: IndexedDB limits vary by browser - implement quota management?
+4. **AI streaming**: Stream AI responses in real-time or wait for completion?
+5. **Tag autocomplete**: Use existing tags only or allow free-form + fuzzy matching?
+6. **Export format**: JSON, Markdown files, or both?
+7. **Rate limiting**: Implement rate limits on AI executions to prevent API abuse?
+
+---
+
+## 14. Next Steps
+
+1. **Review & Approve PRD**: Confirm all requirements align with vision
+2. **Setup Development Environment**:
+   - Initialize Next.js project
+   - Configure Supabase project
+   - Setup Capacitor
+3. **Database Schema**: Implement Supabase tables + RLS policies
+4. **Start Phase 1**: Begin with authentication and basic note CRUD
+5. **Use Claude Code**: Delegate coding tasks following this PRD
+
+---
+
+**Document Control**
+- Author: AI Product Manager
+- Reviewers: TBD
+- Approval: Pending
+- Next Review: After Phase 1 completion
