@@ -33,8 +33,8 @@ export default function SignUpPage() {
     const hasUpperCase = /[A-Z]/.test(password);
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumber = /\d/.test(password);
-    // More inclusive special character set
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>[\]\\'/`~\-_+=]/.test(password);
+    // Match any non-alphanumeric character (simpler and more inclusive)
+    const hasSpecialChar = /[^a-zA-Z0-9]/.test(password);
 
     if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
       setError('Password must contain uppercase, lowercase, number, and special character');
