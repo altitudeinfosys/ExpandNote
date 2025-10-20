@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "build": "node scripts/validate-env.js && next build --turbopack",
     "start": "next start",
     "lint": "eslint",
     "type-check": "tsc --noEmit",
     "test": "echo \"No tests yet\" && exit 0",
+    "validate-env": "node scripts/validate-env.js",
     "supabase:gen-types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > src/types/supabase.ts"
   },
   "dependencies": {
