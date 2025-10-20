@@ -115,19 +115,6 @@ function LoginForm() {
               />
             </div>
 
-            <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="ml-2 text-gray-600 dark:text-gray-400">Remember me</span>
-              </label>
-              <Link href="/forgot-password" className="text-blue-600 dark:text-blue-400 hover:underline">
-                Forgot password?
-              </Link>
-            </div>
-
             <button
               type="submit"
               disabled={loading}
