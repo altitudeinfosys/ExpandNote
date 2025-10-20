@@ -31,7 +31,9 @@ function LoginForm() {
       return;
     }
 
-    if (!email.includes('@')) {
+    // Email validation (same regex as signup for consistency)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
       setError('Please enter a valid email address');
       return;
     }

@@ -43,15 +43,21 @@ export default function SignUpPage() {
       return;
     }
 
-    // 4. Password complexity
+    // 4. No whitespace allowed
+    if (/\s/.test(password)) {
+      setError('Password cannot contain spaces');
+      return;
+    }
+
+    // 5. Password complexity
     const hasUpperCase = /[A-Z]/.test(password);
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumber = /\d/.test(password);
-    // Match non-alphanumeric but exclude whitespace
+    // Match non-alphanumeric (excluding whitespace which is already checked)
     const hasSpecialChar = /[^a-zA-Z0-9\s]/.test(password);
 
     if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
-      setError('Password must contain uppercase, lowercase, number, and special character (no spaces)');
+      setError('Password must contain uppercase, lowercase, number, and special character');
       return;
     }
 
