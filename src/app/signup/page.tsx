@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 
@@ -13,7 +12,6 @@ export default function SignUpPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const { signUp } = useAuth();
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +50,7 @@ export default function SignUpPage() {
         setSuccess(true);
         // Don't redirect immediately, show success message first
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred');
     } finally {
       setLoading(false);
@@ -73,7 +71,7 @@ export default function SignUpPage() {
               Check Your Email
             </h2>
             <p className="text-gray-600 dark:text-gray-300 mb-6">
-              We've sent a verification link to <strong>{email}</strong>
+              We&apos;ve sent a verification link to <strong>{email}</strong>
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
               Click the link in the email to verify your account and complete the sign-up process.

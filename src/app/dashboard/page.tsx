@@ -69,7 +69,7 @@ export default function DashboardPage() {
               Welcome to ExpandNote!
             </h2>
             <p className="text-gray-600 dark:text-gray-300">
-              You're successfully logged in as <strong>{user.email}</strong>
+              You&apos;re successfully logged in as <strong>{user.email}</strong>
             </p>
           </div>
 

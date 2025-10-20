@@ -1,0 +1,53 @@
+
+> expandnote@0.1.0 dev
+> next dev --turbopack -p 3003
+
+   ▲ Next.js 15.5.6 (Turbopack)
+   - Local:        http://localhost:3003
+   - Network:      http://192.168.86.237:3003
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Compiled middleware in 130ms
+ ✓ Ready in 954ms
+ ○ Compiling / ...
+ ✓ Compiled / in 1443ms
+ GET / 200 in 1646ms
+ ✓ Compiled /favicon.ico in 130ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 417ms
+ ✓ Compiled /login in 218ms
+ GET /login 200 in 268ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 239ms
+ ✓ Compiled /signup in 143ms
+ GET /signup 200 in 167ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 249ms
+ ✓ Compiled /auth/callback in 192ms
+ GET /auth/callback?code=4e6a5efd-bb60-4574-bb5e-21c81a14f7c1 307 in 708ms
+ GET /login?error=verification_failed 200 in 55ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 240ms
+ GET /auth/callback?error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired 307 in 238ms
+ GET /login?error=verification_failed 200 in 48ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 225ms
+ GET /login 200 in 34ms
+ GET /auth/callback?error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired 307 in 266ms
+ GET /login?error=verification_failed 200 in 62ms
+ ✓ Compiled /dashboard in 170ms
+ GET /dashboard 200 in 205ms
+ GET /dashboard 200 in 33ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 232ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 258ms
+ GET /login 200 in 57ms
+ GET / 200 in 58ms
+ ✓ Compiled in 43ms
+ ✓ Compiled in 24ms
+ ✓ Compiled middleware in 3ms
+ ✓ Compiled in 29ms
+ ⚠ Fast Refresh had to perform a full reload when ./src/app/login/page.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ✓ Compiled in 77ms
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/tarekalaaddin/Projects/code/ExpandNote/.next/static/development/_buildManifest.js.tmp.due82036fdo'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/tarekalaaddin/Projects/code/ExpandNote/.next/static/development/_buildManifest.js.tmp.due82036fdo'
+}
+ ✓ Compiled in 37ms
