@@ -3,6 +3,8 @@
  *
  * IMPORTANT: For client-side code, Next.js inlines NEXT_PUBLIC_* env vars at build time.
  * We must reference process.env.VARIABLE_NAME directly (not destructured) for this to work.
+ *
+ * Note: Validation runs at module import time, ensuring fast-fail behavior for missing config.
  */
 
 // Direct references to env vars - Next.js will inline these at build time
@@ -26,7 +28,8 @@ if (!SUPABASE_ANON_KEY) {
 
 export const config = {
   supabase: {
-    url: SUPABASE_URL,
-    anonKey: SUPABASE_ANON_KEY,
+    // Non-null assertions are safe here because we've validated above
+    url: SUPABASE_URL!,
+    anonKey: SUPABASE_ANON_KEY!,
   },
 } as const;
