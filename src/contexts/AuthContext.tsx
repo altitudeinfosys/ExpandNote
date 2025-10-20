@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
+import { isValidEmail, validatePassword } from '@/lib/validation';
 
 interface AuthContextType {
   user: User | null;
@@ -43,6 +44,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     try {
+      // Server-side validation (defense in depth - client validation should have already caught these)
+      if (!isValidEmail(email)) {
+        return { error: new Error('Invalid email address format') };
+      }
+
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.valid) {
+        return { error: new Error(passwordValidation.errors[0]) };
+      }
+
       const { error } = await supabase.auth.signUp({
         email,
         password,

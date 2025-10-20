@@ -6,30 +6,34 @@ CREATE OR REPLACE FUNCTION check_note_tags_limit()
 RETURNS TRIGGER AS $$
 DECLARE
   tag_count INTEGER;
-  note_exists BOOLEAN;
 BEGIN
-  -- Lock parent note row with FOR UPDATE to prevent concurrent tag insertions
-  -- This creates an exclusive lock that serializes all tag additions for this note
-  -- While this can theoretically cause deadlocks, in practice:
-  -- 1. Tag additions are user-initiated and infrequent
-  -- 2. The critical section is very short (< 10ms typically)
-  -- 3. PostgreSQL's deadlock detector will automatically retry if needed
-  SELECT EXISTS(SELECT 1 FROM notes WHERE id = NEW.note_id FOR UPDATE) INTO note_exists;
-
-  IF NOT note_exists THEN
-    RAISE EXCEPTION 'Note with id % does not exist', NEW.note_id;
-  END IF;
-
-  -- Now safely count existing tags (parent row is exclusively locked)
+  -- Lock existing note_tags rows for this note using FOR UPDATE
+  -- This prevents concurrent tag insertions from reading the same count
+  -- NOWAIT will fail fast if another transaction is adding tags
   SELECT COUNT(*) INTO tag_count
   FROM note_tags
-  WHERE note_id = NEW.note_id;
+  WHERE note_id = NEW.note_id
+  FOR UPDATE NOWAIT;
 
   IF tag_count >= 5 THEN
     RAISE EXCEPTION 'A note cannot have more than 5 tags';
   END IF;
 
   RETURN NEW;
+EXCEPTION
+  WHEN lock_not_available THEN
+    -- If we can't get the lock, another transaction is modifying tags
+    -- Wait briefly and retry the count (this time with blocking FOR UPDATE)
+    SELECT COUNT(*) INTO tag_count
+    FROM note_tags
+    WHERE note_id = NEW.note_id
+    FOR UPDATE;
+
+    IF tag_count >= 5 THEN
+      RAISE EXCEPTION 'A note cannot have more than 5 tags';
+    END IF;
+
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -47,4 +51,4 @@ CREATE TRIGGER enforce_note_tags_limit_update
   EXECUTE FUNCTION check_note_tags_limit();
 
 -- Add comment for documentation
-COMMENT ON FUNCTION check_note_tags_limit() IS 'Enforces maximum of 5 tags per note with row-level locking to prevent race conditions';
+COMMENT ON FUNCTION check_note_tags_limit() IS 'Enforces maximum of 5 tags per note. Uses FOR UPDATE locks on note_tags rows to prevent concurrent insertions from bypassing the limit.';

@@ -4,6 +4,15 @@
 
 export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Explicit set of allowed special characters for password validation
+// Excludes ambiguous characters and potential security issues
+export const SPECIAL_CHARS = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+export const SPECIAL_CHARS_REGEX = new RegExp(`[${SPECIAL_CHARS.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}]`);
+
+// Password constraints
+export const PASSWORD_MIN_LENGTH = 8;
+export const PASSWORD_MAX_LENGTH = 128; // Prevent bcrypt DoS attacks
+
 export interface PasswordValidationResult {
   valid: boolean;
   errors: string[];
@@ -26,8 +35,12 @@ export function isValidEmail(email: string): boolean {
 export function validatePassword(password: string): PasswordValidationResult {
   const errors: string[] = [];
 
-  if (password.length < 8) {
-    errors.push('Password must be at least 8 characters');
+  if (password.length < PASSWORD_MIN_LENGTH) {
+    errors.push(`Password must be at least ${PASSWORD_MIN_LENGTH} characters`);
+  }
+
+  if (password.length > PASSWORD_MAX_LENGTH) {
+    errors.push(`Password must not exceed ${PASSWORD_MAX_LENGTH} characters`);
   }
 
   if (/\s/.test(password)) {
@@ -46,8 +59,8 @@ export function validatePassword(password: string): PasswordValidationResult {
     errors.push('Must contain at least one number');
   }
 
-  if (!/[^a-zA-Z0-9\s]/.test(password)) {
-    errors.push('Must contain at least one special character');
+  if (!SPECIAL_CHARS_REGEX.test(password)) {
+    errors.push(`Must contain at least one special character (${SPECIAL_CHARS})`);
   }
 
   return {
@@ -57,41 +70,44 @@ export function validatePassword(password: string): PasswordValidationResult {
 }
 
 /**
- * Gets real-time password validation errors for display
- * Only returns errors for requirements that have been attempted
+ * Gets password requirements status for real-time feedback display
  * @param password - Password to validate
- * @returns Array of error messages for current password state
+ * @returns Array of requirement objects with met status
  */
-export function getPasswordErrors(password: string): string[] {
-  if (password.length === 0) {
-    return [];
-  }
+export interface PasswordRequirement {
+  text: string;
+  met: boolean;
+}
 
-  const errors: string[] = [];
-
-  if (password.length > 0 && password.length < 8) {
-    errors.push('At least 8 characters');
-  }
-
-  if (password.length > 0 && /\s/.test(password)) {
-    errors.push('No spaces allowed');
-  }
-
-  if (password.length > 0 && !/[A-Z]/.test(password)) {
-    errors.push('One uppercase letter');
-  }
-
-  if (password.length > 0 && !/[a-z]/.test(password)) {
-    errors.push('One lowercase letter');
-  }
-
-  if (password.length > 0 && !/\d/.test(password)) {
-    errors.push('One number');
-  }
-
-  if (password.length > 0 && !/[^a-zA-Z0-9\s]/.test(password)) {
-    errors.push('One special character');
-  }
-
-  return errors;
+export function getPasswordRequirements(password: string): PasswordRequirement[] {
+  return [
+    {
+      text: `At least ${PASSWORD_MIN_LENGTH} characters`,
+      met: password.length >= PASSWORD_MIN_LENGTH,
+    },
+    {
+      text: `No more than ${PASSWORD_MAX_LENGTH} characters`,
+      met: password.length <= PASSWORD_MAX_LENGTH,
+    },
+    {
+      text: 'No spaces',
+      met: password.length === 0 || !/\s/.test(password),
+    },
+    {
+      text: 'One uppercase letter (A-Z)',
+      met: /[A-Z]/.test(password),
+    },
+    {
+      text: 'One lowercase letter (a-z)',
+      met: /[a-z]/.test(password),
+    },
+    {
+      text: 'One number (0-9)',
+      met: /\d/.test(password),
+    },
+    {
+      text: `One special character (${SPECIAL_CHARS})`,
+      met: SPECIAL_CHARS_REGEX.test(password),
+    },
+  ];
 }

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
-import { isValidEmail, validatePassword } from '@/lib/validation';
+import { isValidEmail, validatePassword, SPECIAL_CHARS } from '@/lib/validation';
 
 export default function SignUpPage() {
   const [email, setEmail] = useState('');
@@ -52,13 +52,26 @@ export default function SignUpPage() {
       const { error } = await signUp(email, password);
 
       if (error) {
-        setError(error.message);
+        // Map Supabase errors to user-friendly messages
+        if (error.message.includes('User already registered')) {
+          setError('This email is already registered. Please log in instead.');
+        } else if (error.message.includes('rate limit')) {
+          setError('Too many sign-up attempts. Please try again in a few minutes.');
+        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+          setError('Network error. Please check your connection and try again.');
+        } else if (error.message.includes('Invalid email')) {
+          setError('Please enter a valid email address.');
+        } else {
+          setError(error.message);
+        }
       } else {
         setSuccess(true);
         // Don't redirect immediately, show success message first
       }
-    } catch {
-      setError('An unexpected error occurred');
+    } catch (err) {
+      // Handle unexpected errors
+      console.error('Signup error:', err);
+      setError('An unexpected error occurred. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -165,7 +178,7 @@ export default function SignUpPage() {
                 </button>
               </div>
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Must include uppercase, lowercase, number, and special character
+                Must include uppercase, lowercase, number, and special character ({SPECIAL_CHARS})
               </p>
             </div>
 
