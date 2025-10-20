@@ -33,7 +33,8 @@ export default function SignUpPage() {
     const hasUpperCase = /[A-Z]/.test(password);
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumber = /\d/.test(password);
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    // More inclusive special character set
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>[\]\\'/`~\-_+=]/.test(password);
 
     if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
       setError('Password must contain uppercase, lowercase, number, and special character');
@@ -45,7 +46,9 @@ export default function SignUpPage() {
       return;
     }
 
-    if (!email.includes('@')) {
+    // Basic email validation (let Supabase handle detailed validation)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
       setError('Please enter a valid email address');
       return;
     }

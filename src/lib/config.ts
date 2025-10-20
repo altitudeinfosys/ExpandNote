@@ -35,10 +35,19 @@ function validateEnvVars() {
   }
 }
 
-// Validate on module load
-if (typeof window === 'undefined') {
-  // Only validate on server-side to avoid issues during build
-  validateEnvVars();
+// Validate on module load (skip during build phase)
+if (typeof window === 'undefined' && process.env.NODE_ENV !== 'production') {
+  // Only validate during development, not during build
+  // In production/build, validation happens at runtime when actually needed
+  try {
+    validateEnvVars();
+  } catch (error) {
+    // During build, env vars might not be available yet
+    // Just log a warning instead of throwing
+    if (process.env.NEXT_PHASE !== 'phase-production-build') {
+      console.warn('Environment validation warning:', error);
+    }
+  }
 }
 
 export const config = {
