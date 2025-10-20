@@ -5,9 +5,11 @@
 export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Explicit set of allowed special characters for password validation
-// Excludes ambiguous characters and potential security issues
+// Using a comprehensive list to show users what's accepted
 export const SPECIAL_CHARS = '!@#$%^&*()_+-=[]{}|;:,.<>?';
-export const SPECIAL_CHARS_REGEX = new RegExp(`[${SPECIAL_CHARS.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}]`);
+// Simpler and more reliable - matches any non-alphanumeric character except spaces
+// This is more permissive than the explicit list above, which is shown to users for guidance
+export const SPECIAL_CHARS_REGEX = /[^a-zA-Z0-9\s]/;
 
 // Password constraints
 export const PASSWORD_MIN_LENGTH = 8;
