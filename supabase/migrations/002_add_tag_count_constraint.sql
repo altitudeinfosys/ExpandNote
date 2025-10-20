@@ -8,9 +8,10 @@ DECLARE
   tag_count INTEGER;
   note_exists BOOLEAN;
 BEGIN
-  -- Lock the parent note row to serialize all tag additions for this note
-  -- This prevents race conditions where multiple transactions see the same count
-  SELECT EXISTS(SELECT 1 FROM notes WHERE id = NEW.note_id FOR UPDATE) INTO note_exists;
+  -- Check note exists with FOR SHARE lock (prevents deadlocks)
+  -- FOR SHARE allows concurrent reads but prevents deletes
+  -- This is safer than FOR UPDATE which can cause cross-table deadlocks
+  SELECT EXISTS(SELECT 1 FROM notes WHERE id = NEW.note_id FOR SHARE) INTO note_exists;
 
   IF NOT note_exists THEN
     RAISE EXCEPTION 'Note with id % does not exist', NEW.note_id;

@@ -18,38 +18,40 @@ export default function SignUpPage() {
     setError('');
     setSuccess(false);
 
-    // Validation
+    // Validation - ordered by user flow: email first, then passwords
     if (!email || !password || !confirmPassword) {
       setError('All fields are required');
       return;
     }
 
-    // Strong password validation
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+    // 1. Email validation (check this first so user doesn't waste time on password)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address');
       return;
     }
 
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
-    const hasNumber = /\d/.test(password);
-    // Match any non-alphanumeric character (simpler and more inclusive)
-    const hasSpecialChar = /[^a-zA-Z0-9]/.test(password);
-
-    if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
-      setError('Password must contain uppercase, lowercase, number, and special character');
-      return;
-    }
-
+    // 2. Password match check (quick fail before complex validation)
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
-    // Basic email validation (let Supabase handle detailed validation)
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError('Please enter a valid email address');
+    // 3. Password length
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+
+    // 4. Password complexity
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    // Match non-alphanumeric but exclude whitespace
+    const hasSpecialChar = /[^a-zA-Z0-9\s]/.test(password);
+
+    if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
+      setError('Password must contain uppercase, lowercase, number, and special character (no spaces)');
       return;
     }
 
@@ -148,10 +150,13 @@ export default function SignUpPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors"
-                placeholder="Min 8 chars with uppercase, lowercase, number & special char"
+                placeholder="At least 8 characters"
                 disabled={loading}
                 required
               />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Must include uppercase, lowercase, number, and special character
+              </p>
             </div>
 
             <div>

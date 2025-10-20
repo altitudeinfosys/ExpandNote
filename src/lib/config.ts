@@ -9,8 +9,7 @@ function getRequiredEnvVar(key: string): string {
   if (!value) {
     throw new Error(
       `Missing required environment variable: ${key}\n` +
-      `Please add it to your .env.local file or Vercel environment variables.\n` +
-      `See VERCEL_DEPLOYMENT.md for setup instructions.`
+      `Please add it to your .env.local file or deployment environment variables.`
     );
   }
 
