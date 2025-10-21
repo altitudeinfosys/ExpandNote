@@ -25,8 +25,15 @@ export async function GET(request: NextRequest) {
 
     // Get query parameters for filtering, sorting, and pagination
     const searchParams = request.nextUrl.searchParams;
-    const sortBy = searchParams.get('sortBy') || 'updated_at';
-    const sortOrder = searchParams.get('sortOrder') || 'desc';
+
+    // Validate and sanitize sortBy parameter to prevent SQL injection
+    const allowedSortFields = ['updated_at', 'created_at', 'title'] as const;
+    const sortByParam = searchParams.get('sortBy') || 'updated_at';
+    const sortBy = allowedSortFields.includes(sortByParam as typeof allowedSortFields[number])
+      ? sortByParam
+      : 'updated_at';
+
+    const sortOrder = searchParams.get('sortOrder') === 'asc' ? 'asc' : 'desc';
     const showFavorites = searchParams.get('favorites') === 'true';
 
     // Pagination

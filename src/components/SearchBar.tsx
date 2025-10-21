@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { SEARCH_DEBOUNCE_MS } from '@/lib/constants';
 
 interface SearchBarProps {
@@ -16,19 +16,25 @@ export function SearchBar({
 }: SearchBarProps) {
   const [query, setQuery] = useState('');
 
+  // Use ref to avoid re-creating effect when onSearch changes
+  const onSearchRef = useRef(onSearch);
+  useEffect(() => {
+    onSearchRef.current = onSearch;
+  }, [onSearch]);
+
   // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
-      onSearch(query);
+      onSearchRef.current(query);
     }, debounceMs);
 
     return () => clearTimeout(timer);
-  }, [query, onSearch, debounceMs]);
+  }, [query, debounceMs]);
 
   const handleClear = useCallback(() => {
     setQuery('');
-    onSearch('');
-  }, [onSearch]);
+    onSearchRef.current('');
+  }, []);
 
   return (
     <div className="relative">
