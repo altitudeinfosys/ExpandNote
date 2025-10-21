@@ -98,9 +98,17 @@ export default function DashboardPage() {
 
   const handleDeleteNote = useCallback(
     async (noteId: string) => {
-      await deleteNoteById(noteId);
+      try {
+        await deleteNoteById(noteId);
+        // Refetch notes to ensure UI is in sync with backend
+        await fetchNotes();
+      } catch (error) {
+        console.error('Failed to delete note:', error);
+        // Refetch anyway to ensure UI consistency
+        await fetchNotes();
+      }
     },
-    [deleteNoteById]
+    [deleteNoteById, fetchNotes]
   );
 
   const handleSearch = useCallback(
