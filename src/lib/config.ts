@@ -1,29 +1,35 @@
 /**
  * Configuration and environment variable validation
- * Uses lazy evaluation to avoid module load errors
+ *
+ * IMPORTANT: For client-side code, Next.js inlines NEXT_PUBLIC_* env vars at build time.
+ * We must reference process.env.VARIABLE_NAME directly (not destructured) for this to work.
+ *
+ * Note: Validation runs at module import time, ensuring fast-fail behavior for missing config.
  */
 
-function getRequiredEnvVar(key: string): string {
-  const value = process.env[key];
+// Direct references to env vars - Next.js will inline these at build time
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!value) {
-    throw new Error(
-      `Missing required environment variable: ${key}\n` +
-      `Please add it to your .env.local file or deployment environment variables.`
-    );
-  }
-
-  return value;
+// Validate on module load
+if (!SUPABASE_URL) {
+  throw new Error(
+    'Missing required environment variable: NEXT_PUBLIC_SUPABASE_URL\n' +
+    'Please add it to your .env.local file or deployment environment variables.'
+  );
 }
 
-// Use getters for lazy evaluation - env vars accessed only when needed
+if (!SUPABASE_ANON_KEY) {
+  throw new Error(
+    'Missing required environment variable: NEXT_PUBLIC_SUPABASE_ANON_KEY\n' +
+    'Please add it to your .env.local file or deployment environment variables.'
+  );
+}
+
 export const config = {
   supabase: {
-    get url() {
-      return getRequiredEnvVar('NEXT_PUBLIC_SUPABASE_URL');
-    },
-    get anonKey() {
-      return getRequiredEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY');
-    },
+    // Non-null assertions are safe here because we've validated above
+    url: SUPABASE_URL!,
+    anonKey: SUPABASE_ANON_KEY!,
   },
 } as const;
