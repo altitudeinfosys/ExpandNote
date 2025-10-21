@@ -21,7 +21,6 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sortBy') || 'updated_at';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
     const showFavorites = searchParams.get('favorites') === 'true';
-    const tagIds = searchParams.get('tagIds')?.split(',').filter(Boolean);
 
     // Build query
     let query = supabase
@@ -65,7 +64,7 @@ export async function GET(request: NextRequest) {
     // Transform the data to flatten tags
     const transformedNotes = notes?.map((note) => ({
       ...note,
-      tags: note.tags?.map((t: any) => t.tag).filter(Boolean) || [],
+      tags: note.tags?.map((t: { tag: unknown }) => t.tag).filter(Boolean) || [],
     }));
 
     return NextResponse.json({ data: transformedNotes });
@@ -173,7 +172,7 @@ export async function POST(request: NextRequest) {
 
     const transformedNote = {
       ...noteWithTags,
-      tags: noteWithTags?.tags?.map((t: any) => t.tag).filter(Boolean) || [],
+      tags: noteWithTags?.tags?.map((t: { tag: unknown }) => t.tag).filter(Boolean) || [],
     };
 
     return NextResponse.json({ data: transformedNote }, { status: 201 });

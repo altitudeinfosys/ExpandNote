@@ -31,7 +31,8 @@ export function MarkdownEditor({
 
   // SimpleMDE options
   const options = useMemo(() => {
-    return {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const opts: any = {
       spellChecker: false,
       placeholder,
       autofocus: autoFocus,
@@ -51,7 +52,7 @@ export function MarkdownEditor({
         'preview',
         'side-by-side',
         'fullscreen',
-      ] as any,
+      ],
       shortcuts: {
         toggleBold: 'Cmd-B',
         toggleItalic: 'Cmd-I',
@@ -64,7 +65,8 @@ export function MarkdownEditor({
       minHeight: '400px',
       maxHeight: '600px',
       sideBySideFullscreen: false,
-    } as any;
+    };
+    return opts;
   }, [placeholder, autoFocus]);
 
   // Handle editor instance

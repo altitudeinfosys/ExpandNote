@@ -28,12 +28,20 @@ export function NoteEditor({ note, onSave, onDelete, onClose }: NoteEditorProps)
 
   // Reset state when note changes
   useEffect(() => {
-    setTitle(note?.title || '');
-    setContent(note?.content || '');
-    setIsFavorite(note?.is_favorite || false);
-    setLastSaved(note ? new Date(note.updated_at) : null);
-    setHasUnsavedChanges(false);
-  }, [note?.id]); // Only reset when note ID changes
+    if (note) {
+      setTitle(note.title || '');
+      setContent(note.content || '');
+      setIsFavorite(note.is_favorite || false);
+      setLastSaved(new Date(note.updated_at));
+      setHasUnsavedChanges(false);
+    } else {
+      setTitle('');
+      setContent('');
+      setIsFavorite(false);
+      setLastSaved(null);
+      setHasUnsavedChanges(false);
+    }
+  }, [note]); // Reset when note changes
 
   // Track changes
   useEffect(() => {
@@ -43,17 +51,6 @@ export function NoteEditor({ note, onSave, onDelete, onClose }: NoteEditorProps)
       isFavorite !== (note?.is_favorite || false);
     setHasUnsavedChanges(hasChanges);
   }, [title, content, isFavorite, note]);
-
-  // Auto-save after 2 seconds of no changes
-  useEffect(() => {
-    if (!hasUnsavedChanges || !note) return;
-
-    const timer = setTimeout(() => {
-      handleSave();
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [title, content, isFavorite, hasUnsavedChanges, note]);
 
   const handleSave = useCallback(async () => {
     if (!content.trim()) return;
@@ -73,6 +70,17 @@ export function NoteEditor({ note, onSave, onDelete, onClose }: NoteEditorProps)
       setIsSaving(false);
     }
   }, [title, content, isFavorite, onSave]);
+
+  // Auto-save after 2 seconds of no changes
+  useEffect(() => {
+    if (!hasUnsavedChanges || !note) return;
+
+    const timer = setTimeout(() => {
+      handleSave();
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [hasUnsavedChanges, note, handleSave]);
 
   const handleDelete = useCallback(async () => {
     if (!note || !onDelete) return;

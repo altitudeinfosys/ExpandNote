@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch tags for the found notes
-    const noteIds = searchResults.map((note: any) => note.id);
+    const noteIds = searchResults.map((note: { id: string }) => note.id);
 
     if (noteIds.length === 0) {
       return NextResponse.json({ data: [] });
@@ -59,8 +59,8 @@ export async function GET(request: NextRequest) {
       .in('note_id', noteIds);
 
     // Group tags by note_id
-    const tagsByNoteId: Record<string, any[]> = {};
-    noteTags?.forEach((nt: any) => {
+    const tagsByNoteId: Record<string, unknown[]> = {};
+    noteTags?.forEach((nt: { note_id: string; tag: unknown }) => {
       if (!tagsByNoteId[nt.note_id]) {
         tagsByNoteId[nt.note_id] = [];
       }
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Combine results with tags
-    const notesWithTags = searchResults.map((note: any) => ({
+    const notesWithTags = searchResults.map((note: { id: string }) => ({
       ...note,
       tags: tagsByNoteId[note.id] || [],
     }));

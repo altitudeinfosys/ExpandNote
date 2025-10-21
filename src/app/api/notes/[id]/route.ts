@@ -53,7 +53,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // Transform the data to flatten tags
     const transformedNote = {
       ...note,
-      tags: note.tags?.map((t: any) => t.tag).filter(Boolean) || [],
+      tags: note.tags?.map((t: { tag: unknown }) => t.tag).filter(Boolean) || [],
     };
 
     return NextResponse.json({ data: transformedNote });
@@ -110,13 +110,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // Build update object
-    const updates: any = {};
+    const updates: Record<string, string | boolean | null> = {};
     if (title !== undefined) updates.title = title || null;
     if (content !== undefined) updates.content = content;
     if (is_favorite !== undefined) updates.is_favorite = is_favorite;
 
     // Update the note
-    const { data: updatedNote, error: updateError } = await supabase
+    const { error: updateError } = await supabase
       .from('notes')
       .update(updates)
       .eq('id', id)
@@ -178,7 +178,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const transformedNote = {
       ...noteWithTags,
-      tags: noteWithTags?.tags?.map((t: any) => t.tag).filter(Boolean) || [],
+      tags: noteWithTags?.tags?.map((t: { tag: unknown }) => t.tag).filter(Boolean) || [],
     };
 
     return NextResponse.json({ data: transformedNote });

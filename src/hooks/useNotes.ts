@@ -1,8 +1,7 @@
 'use client';
 
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { useNotesStore } from '@/stores/notesStore';
-import type { Note } from '@/types';
 
 export function useNotes() {
   const {
