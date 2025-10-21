@@ -1,25 +1,116 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotes } from '@/hooks/useNotes';
+import { NoteList } from '@/components/NoteList';
+import { NoteEditor } from '@/components/NoteEditor';
+import { SearchBar } from '@/components/SearchBar';
 
 export default function DashboardPage() {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const router = useRouter();
+  const {
+    notes,
+    selectedNote,
+    selectedNoteId,
+    isLoading,
+    error,
+    fetchNotes,
+    createNote,
+    updateNoteById,
+    deleteNoteById,
+    searchNotes,
+    selectNote,
+  } = useNotes();
 
+  const [showEditor, setShowEditor] = useState(false);
+  const [isCreatingNote, setIsCreatingNote] = useState(false);
+
+  // Redirect if not authenticated
   useEffect(() => {
-    if (!loading && !user) {
+    if (!authLoading && !user) {
       router.push('/login');
     }
-  }, [user, loading, router]);
+  }, [user, authLoading, router]);
+
+  // Fetch notes on mount
+  useEffect(() => {
+    if (user && !authLoading) {
+      fetchNotes();
+    }
+  }, [user, authLoading, fetchNotes]);
+
+  // Show editor when a note is selected
+  useEffect(() => {
+    setShowEditor(!!selectedNoteId);
+  }, [selectedNoteId]);
 
   const handleSignOut = async () => {
     await signOut();
     router.push('/');
   };
 
-  if (loading) {
+  const handleCreateNote = useCallback(async () => {
+    setIsCreatingNote(true);
+    try {
+      const newNote = await createNote({
+        title: null,
+        content: '',
+        is_favorite: false,
+      });
+      selectNote(newNote.id);
+      setShowEditor(true);
+    } catch (error) {
+      console.error('Failed to create note:', error);
+      alert('Failed to create note. Please try again.');
+    } finally {
+      setIsCreatingNote(false);
+    }
+  }, [createNote, selectNote]);
+
+  const handleSelectNote = useCallback(
+    (noteId: string) => {
+      selectNote(noteId);
+      setShowEditor(true);
+    },
+    [selectNote]
+  );
+
+  const handleCloseEditor = useCallback(() => {
+    selectNote(null);
+    setShowEditor(false);
+  }, [selectNote]);
+
+  const handleSaveNote = useCallback(
+    async (noteData: {
+      title: string | null;
+      content: string;
+      is_favorite: boolean;
+    }) => {
+      if (!selectedNote) return;
+
+      await updateNoteById(selectedNote.id, noteData);
+    },
+    [selectedNote, updateNoteById]
+  );
+
+  const handleDeleteNote = useCallback(
+    async (noteId: string) => {
+      await deleteNoteById(noteId);
+    },
+    [deleteNoteById]
+  );
+
+  const handleSearch = useCallback(
+    (query: string) => {
+      searchNotes(query);
+    },
+    [searchNotes]
+  );
+
+  if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
@@ -35,9 +126,9 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow">
+      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             ExpandNote
@@ -57,77 +148,96 @@ export default function DashboardPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8">
-          <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-10 h-10 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+      <div className="flex-1 flex overflow-hidden">
+        {/* Sidebar - Note List */}
+        <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+          {/* Search and Create */}
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-3">
+            <SearchBar onSearch={handleSearch} />
+            <button
+              onClick={handleCreateNote}
+              disabled={isCreatingNote}
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center justify-center gap-2"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
               </svg>
-            </div>
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Welcome to ExpandNote!
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300">
-              You&apos;re successfully logged in as <strong>{user.email}</strong>
-            </p>
+              {isCreatingNote ? 'Creating...' : 'New Note'}
+            </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-            <div className="p-6 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <h3 className="font-semibold text-lg mb-2 text-gray-900 dark:text-white">
-                Create Notes
-              </h3>
-              <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
-                Start creating notes with markdown support
-              </p>
-              <button className="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium">
-                Coming Soon →
-              </button>
-            </div>
-
-            <div className="p-6 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <h3 className="font-semibold text-lg mb-2 text-gray-900 dark:text-white">
-                Voice Input
-              </h3>
-              <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
-                Record audio and transcribe with AI
-              </p>
-              <button className="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium">
-                Coming Soon →
-              </button>
-            </div>
-
-            <div className="p-6 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <h3 className="font-semibold text-lg mb-2 text-gray-900 dark:text-white">
-                AI Profiles
-              </h3>
-              <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
-                Set up AI automation for your notes
-              </p>
-              <button className="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium">
-                Coming Soon →
-              </button>
-            </div>
-          </div>
-
-          <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-            <h4 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">
-              Authentication Working!
-            </h4>
-            <p className="text-sm text-blue-700 dark:text-blue-400">
-              Your authentication system is set up and working correctly. The following features are now active:
-            </p>
-            <ul className="mt-2 space-y-1 text-sm text-blue-700 dark:text-blue-400">
-              <li>✓ Email/Password sign up with verification</li>
-              <li>✓ Email verification via callback</li>
-              <li>✓ Login with session management</li>
-              <li>✓ Protected routes (this dashboard)</li>
-              <li>✓ Sign out functionality</li>
-            </ul>
+          {/* Note List */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              </div>
+            )}
+            <NoteList
+              notes={notes}
+              selectedNoteId={selectedNoteId}
+              onSelectNote={handleSelectNote}
+              onCreateNote={handleCreateNote}
+              isLoading={isLoading}
+            />
           </div>
         </div>
-      </main>
+
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col">
+          {showEditor && selectedNote ? (
+            <NoteEditor
+              note={selectedNote}
+              onSave={handleSaveNote}
+              onDelete={handleDeleteNote}
+              onClose={handleCloseEditor}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+              <div className="text-center">
+                <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <svg
+                    className="w-12 h-12 text-gray-400 dark:text-gray-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                  Welcome to ExpandNote
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                  Select a note or create a new one to get started
+                </p>
+                <button
+                  onClick={handleCreateNote}
+                  disabled={isCreatingNote}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                >
+                  Create Your First Note
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
