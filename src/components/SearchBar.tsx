@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import { SEARCH_DEBOUNCE_MS } from '@/lib/constants';
 
 interface SearchBarProps {
   onSearch: (query: string) => void;
@@ -11,7 +12,7 @@ interface SearchBarProps {
 export function SearchBar({
   onSearch,
   placeholder = 'Search notes...',
-  debounceMs = 300,
+  debounceMs = SEARCH_DEBOUNCE_MS,
 }: SearchBarProps) {
   const [query, setQuery] = useState('');
 

@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import {
+  MAX_CONTENT_SIZE_BYTES,
+  MAX_TITLE_LENGTH,
+  MAX_TAGS_PER_NOTE,
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+} from '@/lib/constants';
 
 // GET /api/notes - List all notes for the authenticated user
 export async function GET(request: NextRequest) {
@@ -16,11 +23,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get query parameters for filtering and sorting
+    // Get query parameters for filtering, sorting, and pagination
     const searchParams = request.nextUrl.searchParams;
     const sortBy = searchParams.get('sortBy') || 'updated_at';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
     const showFavorites = searchParams.get('favorites') === 'true';
+
+    // Pagination
+    const limit = Math.min(
+      parseInt(searchParams.get('limit') || String(DEFAULT_PAGE_SIZE)),
+      MAX_PAGE_SIZE
+    );
+    const offset = parseInt(searchParams.get('offset') || '0');
 
     // Build query
     let query = supabase
@@ -31,7 +45,8 @@ export async function GET(request: NextRequest) {
         tags:note_tags(
           tag:tags(*)
         )
-      `
+      `,
+        { count: 'exact' } // Get total count for pagination
       )
       .eq('user_id', user.id)
       .is('deleted_at', null);
@@ -51,7 +66,10 @@ export async function GET(request: NextRequest) {
     const ascending = sortOrder === 'asc';
     query = query.order(sortBy, { ascending });
 
-    const { data: notes, error } = await query;
+    // Apply pagination
+    query = query.range(offset, offset + limit - 1);
+
+    const { data: notes, error, count } = await query;
 
     if (error) {
       console.error('Error fetching notes:', error);
@@ -67,7 +85,15 @@ export async function GET(request: NextRequest) {
       tags: note.tags?.map((t: { tag: unknown }) => t.tag).filter(Boolean) || [],
     }));
 
-    return NextResponse.json({ data: transformedNotes });
+    return NextResponse.json({
+      data: transformedNotes,
+      pagination: {
+        total: count || 0,
+        limit,
+        offset,
+        hasMore: (count || 0) > offset + limit,
+      },
+    });
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json(
@@ -103,10 +129,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check content size (max 1MB)
-    if (content.length > 1048576) {
+    // Validate title length
+    if (title && title.length > MAX_TITLE_LENGTH) {
       return NextResponse.json(
-        { error: 'Content exceeds maximum size of 1MB' },
+        { error: `Title cannot exceed ${MAX_TITLE_LENGTH} characters` },
+        { status: 400 }
+      );
+    }
+
+    // Check content size
+    if (content.length > MAX_CONTENT_SIZE_BYTES) {
+      return NextResponse.json(
+        { error: `Content exceeds maximum size of ${MAX_CONTENT_SIZE_BYTES / 1024 / 1024}MB` },
         { status: 400 }
       );
     }
@@ -133,10 +167,35 @@ export async function POST(request: NextRequest) {
 
     // Add tags if provided
     if (tagIds && Array.isArray(tagIds) && tagIds.length > 0) {
-      // Validate max 5 tags
-      if (tagIds.length > 5) {
+      // Validate max tags
+      if (tagIds.length > MAX_TAGS_PER_NOTE) {
         return NextResponse.json(
-          { error: 'Maximum 5 tags allowed per note' },
+          { error: `Maximum ${MAX_TAGS_PER_NOTE} tags allowed per note` },
+          { status: 400 }
+        );
+      }
+
+      // Validate tag IDs are valid UUIDs and belong to user
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const invalidTagIds = tagIds.filter((id: string) => !uuidRegex.test(id));
+
+      if (invalidTagIds.length > 0) {
+        return NextResponse.json(
+          { error: 'Invalid tag IDs provided' },
+          { status: 400 }
+        );
+      }
+
+      // Verify tags belong to user
+      const { data: userTags, error: tagsCheckError } = await supabase
+        .from('tags')
+        .select('id')
+        .in('id', tagIds)
+        .eq('user_id', user.id);
+
+      if (tagsCheckError || !userTags || userTags.length !== tagIds.length) {
+        return NextResponse.json(
+          { error: 'One or more tags do not exist or do not belong to you' },
           { status: 400 }
         );
       }

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Note } from '@/types';
 import { MarkdownEditor } from './MarkdownEditor';
 import { formatDateTime } from '@/lib/utils/date';
+import { AUTO_SAVE_DELAY_MS } from '@/lib/constants';
 
 interface NoteEditorProps {
   note: Note | null;
@@ -53,7 +54,10 @@ export function NoteEditor({ note, onSave, onDelete, onClose }: NoteEditorProps)
   }, [title, content, isFavorite, note]);
 
   const handleSave = useCallback(async () => {
-    if (!content.trim()) return;
+    if (!content.trim() && !title.trim()) {
+      // Allow saving with just a title or just content, but not both empty
+      return;
+    }
 
     setIsSaving(true);
     try {
@@ -71,16 +75,17 @@ export function NoteEditor({ note, onSave, onDelete, onClose }: NoteEditorProps)
     }
   }, [title, content, isFavorite, onSave]);
 
-  // Auto-save after 2 seconds of no changes
+  // Auto-save after delay
   useEffect(() => {
     if (!hasUnsavedChanges || !note) return;
 
     const timer = setTimeout(() => {
       handleSave();
-    }, 2000);
+    }, AUTO_SAVE_DELAY_MS);
 
     return () => clearTimeout(timer);
-  }, [hasUnsavedChanges, note, handleSave]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasUnsavedChanges, note?.id, handleSave]); // Only depend on note ID and handleSave
 
   const handleDelete = useCallback(async () => {
     if (!note || !onDelete) return;

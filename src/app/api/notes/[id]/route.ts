@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import {
+  MAX_CONTENT_SIZE_BYTES,
+  MAX_TITLE_LENGTH,
+  MAX_TAGS_PER_NOTE,
+} from '@/lib/constants';
 
 type RouteParams = {
   params: Promise<{
@@ -88,12 +93,20 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // Validate content if provided
     if (content !== undefined) {
       // Allow empty content for notes
-      if (content.length > 1048576) {
+      if (content.length > MAX_CONTENT_SIZE_BYTES) {
         return NextResponse.json(
-          { error: 'Content exceeds maximum size of 1MB' },
+          { error: `Content exceeds maximum size of ${MAX_CONTENT_SIZE_BYTES / 1024 / 1024}MB` },
           { status: 400 }
         );
       }
+    }
+
+    // Validate title length if provided
+    if (title !== undefined && title && title.length > MAX_TITLE_LENGTH) {
+      return NextResponse.json(
+        { error: `Title cannot exceed ${MAX_TITLE_LENGTH} characters` },
+        { status: 400 }
+      );
     }
 
     // First, verify the note belongs to the user
@@ -134,16 +147,54 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // Handle tag updates if provided
     if (tagIds !== undefined && Array.isArray(tagIds)) {
-      // Validate max 5 tags
-      if (tagIds.length > 5) {
+      // Validate max tags
+      if (tagIds.length > MAX_TAGS_PER_NOTE) {
         return NextResponse.json(
-          { error: 'Maximum 5 tags allowed per note' },
+          { error: `Maximum ${MAX_TAGS_PER_NOTE} tags allowed per note` },
           { status: 400 }
         );
       }
 
+      // Validate tag IDs if any are provided
+      if (tagIds.length > 0) {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const invalidTagIds = tagIds.filter((tagId: string) => !uuidRegex.test(tagId));
+
+        if (invalidTagIds.length > 0) {
+          return NextResponse.json(
+            { error: 'Invalid tag IDs provided' },
+            { status: 400 }
+          );
+        }
+
+        // Verify tags belong to user
+        const { data: userTags, error: tagsCheckError } = await supabase
+          .from('tags')
+          .select('id')
+          .in('id', tagIds)
+          .eq('user_id', user.id);
+
+        if (tagsCheckError || !userTags || userTags.length !== tagIds.length) {
+          return NextResponse.json(
+            { error: 'One or more tags do not exist or do not belong to you' },
+            { status: 400 }
+          );
+        }
+      }
+
       // Remove existing tags
-      await supabase.from('note_tags').delete().eq('note_id', id);
+      const { error: deleteError } = await supabase
+        .from('note_tags')
+        .delete()
+        .eq('note_id', id);
+
+      if (deleteError) {
+        console.error('Error deleting existing tags:', deleteError);
+        return NextResponse.json(
+          { error: 'Failed to update tags' },
+          { status: 500 }
+        );
+      }
 
       // Add new tags
       if (tagIds.length > 0) {
@@ -157,7 +208,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           .insert(noteTags);
 
         if (tagError) {
-          console.error('Error updating tags:', tagError);
+          console.error('Error inserting tags:', tagError);
+          return NextResponse.json(
+            { error: 'Failed to update tags' },
+            { status: 500 }
+          );
         }
       }
     }
