@@ -3,46 +3,39 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNotes } from '@/hooks/useNotes';
-import { useTags } from '@/hooks/useTags';
+import { useOfflineFirst } from '@/hooks/useOfflineFirst';
 import { NoteList } from '@/components/NoteList';
 import { NoteEditor } from '@/components/NoteEditor';
 import { SearchBar } from '@/components/SearchBar';
 import { TagFilter } from '@/components/TagFilter';
+import { SyncStatusIndicator } from '@/components/SyncStatusIndicator';
 
-export default function DashboardPage() {
+export default function OfflineDashboardPage() {
   const { user, loading: authLoading, signOut } = useAuth();
   const router = useRouter();
-
-  // Use API-based hooks instead of offline-first
   const {
+    // Core offline state
+    syncStatus,
+    lastSyncTime,
+    manualSync,
+
+    // Notes
     notes,
-    isLoading,
-    error,
+    selectedNote,
+    selectedNoteId,
+    notesLoading: isLoading,
+    notesError: error,
     fetchNotes,
     createNote,
-    updateNoteById,
-    deleteNoteById,
+    updateNote,
+    deleteNote,
     searchNotes,
-  } = useNotes();
+    selectNote,
 
-  const {
+    // Tags
     selectedTagIds,
     fetchTags,
-    getTagsForNote,
-    updateNoteTags: updateNoteTagsOriginal,
-  } = useTags();
-
-  // Wrap updateNoteTags to refetch notes after updating
-  const updateNoteTags = useCallback(async (noteId: string, tagIds: string[]) => {
-    const result = await updateNoteTagsOriginal(noteId, tagIds);
-    // Refetch notes to get updated tag data
-    await fetchNotes();
-    return result;
-  }, [updateNoteTagsOriginal, fetchNotes]);
-
-  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
-  const selectedNote = notes.find((note) => note.id === selectedNoteId) || null;
+  } = useOfflineFirst();
 
   const [showEditor, setShowEditor] = useState(false);
   const [isCreatingNote, setIsCreatingNote] = useState(false);
@@ -54,18 +47,17 @@ export default function DashboardPage() {
     }
   }, [user, authLoading, router]);
 
-  // Fetch notes and tags on mount
-  useEffect(() => {
-    if (user && !authLoading) {
-      fetchNotes();
-      fetchTags();
-    }
-  }, [user, authLoading, fetchNotes, fetchTags]);
-
   // Show editor when a note is selected
   useEffect(() => {
     setShowEditor(!!selectedNoteId);
   }, [selectedNoteId]);
+
+  // Refilter notes when selected tags change
+  useEffect(() => {
+    // When tag selection changes, reapply the filter
+    // This will trigger a new search with the current query and updated tag selection
+    handleSearch('');
+  }, [selectedTagIds]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -80,7 +72,7 @@ export default function DashboardPage() {
         content: '',
         is_favorite: false,
       });
-      setSelectedNoteId(newNote.id);
+      selectNote(newNote.id);
       setShowEditor(true);
     } catch (error) {
       console.error('Failed to create note:', error);
@@ -88,20 +80,20 @@ export default function DashboardPage() {
     } finally {
       setIsCreatingNote(false);
     }
-  }, [createNote]);
+  }, [createNote, selectNote]);
 
   const handleSelectNote = useCallback(
     (noteId: string) => {
-      setSelectedNoteId(noteId);
+      selectNote(noteId);
       setShowEditor(true);
     },
-    []
+    [selectNote]
   );
 
   const handleCloseEditor = useCallback(() => {
-    setSelectedNoteId(null);
+    selectNote(null);
     setShowEditor(false);
-  }, []);
+  }, [selectNote]);
 
   const handleSaveNote = useCallback(
     async (noteData: {
@@ -110,20 +102,16 @@ export default function DashboardPage() {
       is_favorite: boolean;
     }) => {
       if (!selectedNote) return;
-
-      await updateNoteById(selectedNote.id, noteData);
+      await updateNote(selectedNote.id, noteData);
     },
-    [selectedNote, updateNoteById]
+    [selectedNote, updateNote]
   );
 
   const handleDeleteNote = useCallback(
     async (noteId: string) => {
       try {
-        // Close the editor first to prevent any state issues
-        handleCloseEditor();
-
-        await deleteNoteById(noteId);
-        // Refetch notes to ensure UI is in sync with backend
+        await deleteNote(noteId);
+        // Refetch notes to ensure UI is in sync with storage
         await fetchNotes();
       } catch (error) {
         console.error('Failed to delete note:', error);
@@ -131,7 +119,7 @@ export default function DashboardPage() {
         await fetchNotes();
       }
     },
-    [deleteNoteById, fetchNotes, handleCloseEditor]
+    [deleteNote, fetchNotes]
   );
 
   const handleSearch = useCallback(
@@ -144,12 +132,9 @@ export default function DashboardPage() {
     [searchNotes, selectedTagIds]
   );
 
-  // Refilter notes when selected tags change
-  useEffect(() => {
-    // When tag selection changes, reapply the filter
-    // This will trigger a new search with the current query and updated tag selection
-    handleSearch('');
-  }, [selectedTagIds, handleSearch]);
+  const handleSyncClick = useCallback(() => {
+    manualSync();
+  }, [manualSync]);
 
   if (authLoading) {
     return (
@@ -175,6 +160,11 @@ export default function DashboardPage() {
             ExpandNote
           </h1>
           <div className="flex items-center gap-4">
+            <SyncStatusIndicator
+              status={syncStatus}
+              lastSyncTime={lastSyncTime}
+              onSync={handleSyncClick}
+            />
             <span className="text-sm text-gray-600 dark:text-gray-300">
               {user.email}
             </span>
@@ -247,8 +237,6 @@ export default function DashboardPage() {
               onSave={handleSaveNote}
               onDelete={handleDeleteNote}
               onClose={handleCloseEditor}
-              getTagsForNote={getTagsForNote}
-              updateNoteTags={updateNoteTags}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">

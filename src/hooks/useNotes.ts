@@ -136,10 +136,11 @@ export function useNotes() {
     [deleteNote, setError]
   );
 
-  // Search notes
+  // Search notes with optional filters
   const searchNotes = useCallback(
-    async (query: string) => {
-      if (!query.trim()) {
+    async (query: string, filters?: { tagIds?: string[] }) => {
+      // If no query and no tag filters, just fetch all notes
+      if (!query.trim() && (!filters?.tagIds || filters.tagIds.length === 0)) {
         fetchNotes();
         return;
       }
@@ -148,9 +149,20 @@ export function useNotes() {
       setError(null);
 
       try {
-        const response = await fetch(
-          `/api/notes/search?q=${encodeURIComponent(query)}`
-        );
+        // Construct search params
+        const params = new URLSearchParams();
+
+        // Add query if provided
+        if (query.trim()) {
+          params.append('q', query);
+        }
+
+        // Add tag filters if provided
+        if (filters?.tagIds && filters.tagIds.length > 0) {
+          filters.tagIds.forEach(id => params.append('tagId', id));
+        }
+
+        const response = await fetch(`/api/notes/search?${params.toString()}`);
         const result = await response.json();
 
         if (!response.ok) {

@@ -1,16 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
-import dynamic from 'next/dynamic';
-import type SimpleMDE from 'simplemde';
+import { useEffect, useRef, useState } from 'react';
 
 // Import SimpleMDE CSS
 import 'simplemde/dist/simplemde.min.css';
-
-// Dynamically import SimpleMdeReact to avoid SSR issues
-const SimpleMdeReact = dynamic(() => import('react-simplemde-editor'), {
-  ssr: false,
-});
 
 interface MarkdownEditorProps {
   value: string;
@@ -27,62 +20,93 @@ export function MarkdownEditor({
   autoFocus = false,
   disabled = false,
 }: MarkdownEditorProps) {
-  const editorRef = useRef<SimpleMDE | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const editorInstanceRef = useRef<any>(null);
+  const [isMounted, setIsMounted] = useState(false);
 
-  // SimpleMDE options
-  const options = useMemo(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const opts: any = {
-      spellChecker: false,
-      placeholder,
-      autofocus: autoFocus,
-      status: false,
-      toolbar: [
-        'bold',
-        'italic',
-        'heading',
-        '|',
-        'quote',
-        'unordered-list',
-        'ordered-list',
-        '|',
-        'link',
-        'image',
-        '|',
-        'preview',
-        'side-by-side',
-        'fullscreen',
-      ],
-      shortcuts: {
-        toggleBold: 'Cmd-B',
-        toggleItalic: 'Cmd-I',
-        toggleHeadingSmaller: 'Cmd-H',
-        toggleCodeBlock: 'Cmd-Alt-C',
-        togglePreview: 'Cmd-P',
-        toggleSideBySide: 'F9',
-        toggleFullScreen: 'F11',
-      },
-      minHeight: '400px',
-      maxHeight: '600px',
-      sideBySideFullscreen: false,
-    };
-    return opts;
-  }, [placeholder, autoFocus]);
-
-  // Handle editor instance
-  const getMdeInstance = (instance: SimpleMDE) => {
-    editorRef.current = instance;
-  };
-
-  // Cleanup on unmount
+  // Initialize SimpleMDE on client side only
   useEffect(() => {
+    setIsMounted(true);
+
+    // Wait for next tick to ensure DOM is ready
+    const initTimer = setTimeout(async () => {
+      if (textareaRef.current && !editorInstanceRef.current) {
+        try {
+          // Dynamically import SimpleMDE only on client
+          const SimpleMDE = (await import('simplemde')).default;
+
+          const instance = new SimpleMDE({
+            element: textareaRef.current,
+            spellChecker: false,
+            placeholder,
+            autofocus: autoFocus,
+            status: false,
+            initialValue: value,
+            toolbar: [
+              'bold',
+              'italic',
+              'heading',
+              '|',
+              'quote',
+              'unordered-list',
+              'ordered-list',
+              '|',
+              'link',
+              'image',
+              '|',
+              'preview',
+              'side-by-side',
+              'fullscreen',
+            ],
+            shortcuts: {
+              toggleBold: 'Cmd-B',
+              toggleItalic: 'Cmd-I',
+              toggleHeadingSmaller: 'Cmd-H',
+              toggleCodeBlock: 'Cmd-Alt-C',
+              togglePreview: 'Cmd-P',
+              toggleSideBySide: 'F9',
+              toggleFullScreen: 'F11',
+            },
+          });
+
+          // Listen for changes
+          instance.codemirror.on('change', () => {
+            onChange(instance.value());
+          });
+
+          editorInstanceRef.current = instance;
+        } catch (error) {
+          console.error('Failed to initialize SimpleMDE:', error);
+        }
+      }
+    }, 100);
+
     return () => {
-      if (editorRef.current) {
-        editorRef.current.toTextArea();
-        editorRef.current = null;
+      clearTimeout(initTimer);
+
+      // Cleanup SimpleMDE instance
+      if (editorInstanceRef.current) {
+        try {
+          editorInstanceRef.current.toTextArea();
+        } catch {
+          // Silently handle cleanup errors
+        } finally {
+          editorInstanceRef.current = null;
+        }
       }
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount - we handle value updates separately
+
+  // Update editor value when prop changes
+  useEffect(() => {
+    if (editorInstanceRef.current && editorInstanceRef.current.value() !== value) {
+      const cursorPos = editorInstanceRef.current.codemirror.getCursor();
+      editorInstanceRef.current.value(value);
+      editorInstanceRef.current.codemirror.setCursor(cursorPos);
+    }
+  }, [value]);
 
   if (disabled) {
     return (
@@ -94,12 +118,17 @@ export function MarkdownEditor({
 
   return (
     <div className="markdown-editor">
-      <SimpleMdeReact
-        value={value}
-        onChange={onChange}
-        options={options}
-        getMdeInstance={getMdeInstance}
+      <textarea
+        ref={textareaRef}
+        defaultValue={value}
+        style={{ display: isMounted ? 'none' : 'block' }}
+        className="w-full min-h-[400px] p-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg"
       />
+      {!isMounted && (
+        <div className="w-full min-h-[400px] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-4">
+          <div className="animate-pulse">Loading editor...</div>
+        </div>
+      )}
     </div>
   );
 }

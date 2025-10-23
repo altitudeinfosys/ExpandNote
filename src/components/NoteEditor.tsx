@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Note } from '@/types';
+import { Note, Tag } from '@/types';
 import { MarkdownEditor } from './MarkdownEditor';
+import { TagSelector } from './TagSelector';
 import { formatDateTime } from '@/lib/utils/date';
 import { AUTO_SAVE_DELAY_MS } from '@/lib/constants';
-
 interface NoteEditorProps {
   note: Note | null;
   onSave: (noteData: {
@@ -15,9 +15,12 @@ interface NoteEditorProps {
   }) => Promise<void>;
   onDelete?: (noteId: string) => Promise<void>;
   onClose: () => void;
+  getTagsForNote?: (noteId: string) => Promise<Tag[]>;
+  updateNoteTags?: (noteId: string, tagIds: string[]) => Promise<Tag[]>;
 }
 
-export function NoteEditor({ note, onSave, onDelete, onClose }: NoteEditorProps) {
+export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, updateNoteTags }: NoteEditorProps) {
+
   const [title, setTitle] = useState(note?.title || '');
   const [content, setContent] = useState(note?.content || '');
   const [isFavorite, setIsFavorite] = useState(note?.is_favorite || false);
@@ -26,23 +29,52 @@ export function NoteEditor({ note, onSave, onDelete, onClose }: NoteEditorProps)
     note ? new Date(note.updated_at) : null
   );
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<Tag[]>(note?.tags || []);
 
   // Reset state when note changes
   useEffect(() => {
+    let isMounted = true;
+
     if (note) {
       setTitle(note.title || '');
       setContent(note.content || '');
       setIsFavorite(note.is_favorite || false);
       setLastSaved(new Date(note.updated_at));
       setHasUnsavedChanges(false);
+
+      // Notes from API already include tags
+      if (note.tags) {
+        setSelectedTags(note.tags);
+      } else if (getTagsForNote) {
+        // Fallback: fetch tags if not included
+        const fetchTags = async () => {
+          try {
+            const tags = await getTagsForNote(note.id);
+            if (isMounted) {
+              setSelectedTags(tags || []);
+            }
+          } catch (error) {
+            if (isMounted) {
+              console.error('Failed to fetch note tags:', error);
+              setSelectedTags([]);
+            }
+          }
+        };
+        fetchTags();
+      }
     } else {
       setTitle('');
       setContent('');
       setIsFavorite(false);
       setLastSaved(null);
       setHasUnsavedChanges(false);
+      setSelectedTags([]);
     }
-  }, [note]); // Reset when note changes
+
+    return () => {
+      isMounted = false;
+    };
+  }, [note, getTagsForNote]);
 
   // Track changes
   useEffect(() => {
@@ -51,6 +83,7 @@ export function NoteEditor({ note, onSave, onDelete, onClose }: NoteEditorProps)
       content !== (note?.content || '') ||
       isFavorite !== (note?.is_favorite || false);
     setHasUnsavedChanges(hasChanges);
+    // Note: We don't track tag changes as part of auto-save since they're saved separately
   }, [title, content, isFavorite, note]);
 
   const handleSave = useCallback(async () => {
@@ -105,6 +138,23 @@ export function NoteEditor({ note, onSave, onDelete, onClose }: NoteEditorProps)
   const toggleFavorite = useCallback(() => {
     setIsFavorite((prev) => !prev);
   }, []);
+
+  const handleTagsChange = useCallback(async (tags: Tag[]) => {
+    if (!note || !updateNoteTags) return;
+
+    // Optimistically update UI
+    setSelectedTags(tags);
+
+    try {
+      const tagIds = tags.map(tag => tag.id);
+      await updateNoteTags(note.id, tagIds);
+    } catch (error) {
+      if (error instanceof Error && !error.message.includes('Note not found')) {
+        console.error('Failed to update note tags:', error);
+        alert('Failed to update tags. Please try again.');
+      }
+    }
+  }, [note, updateNoteTags]);
 
   return (
     <div className="flex flex-col h-full">
@@ -178,13 +228,6 @@ export function NoteEditor({ note, onSave, onDelete, onClose }: NoteEditorProps)
               Delete
             </button>
           )}
-          <button
-            onClick={handleSave}
-            disabled={isSaving || !hasUnsavedChanges}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-          >
-            {isSaving ? 'Saving...' : 'Save'}
-          </button>
         </div>
       </div>
 
@@ -197,11 +240,24 @@ export function NoteEditor({ note, onSave, onDelete, onClose }: NoteEditorProps)
           placeholder="Note title (optional)"
           className="w-full text-2xl font-bold bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
         />
+
+        {/* Tags Selector */}
+        {note && (
+          <div className="mt-3">
+            <TagSelector
+              selectedTags={selectedTags}
+              onTagsChange={handleTagsChange}
+              disabled={isSaving}
+              className="mt-2"
+            />
+          </div>
+        )}
       </div>
 
       {/* Editor */}
       <div className="flex-1 overflow-auto p-4 bg-gray-50 dark:bg-gray-900">
         <MarkdownEditor
+          key={note?.id || 'new-note'}
           value={content}
           onChange={setContent}
           placeholder="Start typing your note..."
