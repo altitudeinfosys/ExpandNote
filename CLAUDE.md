@@ -174,3 +174,6 @@ Full product requirements are documented in `ExpandNote.prd` including:
 - API endpoint specifications
 - UI mockups and interaction flows
 - Success metrics and risk mitigation strategies
+- setup the app for local testing to start at port 3003
+- whenever you finish a request and is ready to be tested and reviewed on my end - please restart the local web server at port 3003
+- always npm run build after each request to ensure that there is no build error

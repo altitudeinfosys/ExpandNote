@@ -44,3 +44,6 @@ next-env.d.ts
 .dev-server-pid
 dev.log
 nohup.out
+.next-server-pid
+dev-3003.log
+*.log
