@@ -163,7 +163,7 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
         <div className="flex items-center gap-3 flex-1">
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
             aria-label="Close editor"
           >
             <svg
@@ -183,7 +183,7 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
 
           <button
             onClick={toggleFavorite}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
             aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
           >
             <svg

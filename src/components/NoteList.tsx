@@ -29,7 +29,7 @@ export function NoteList({
   if (notes.length === 0) {
     return (
       <div className="text-center py-12">
-        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
           <svg
             className="w-8 h-8 text-gray-400 dark:text-gray-500"
             fill="none"
@@ -131,7 +131,7 @@ function NoteListItem({ note, isSelected, onClick }: NoteListItemProps) {
               {note.tags.slice(0, 3).map((tag) => (
                 <span
                   key={tag.id}
-                  className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs"
+                  className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-300 rounded text-xs font-medium"
                 >
                   #{tag.name}
                 </span>
