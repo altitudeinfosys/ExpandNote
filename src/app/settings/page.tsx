@@ -312,11 +312,11 @@ function SettingsContent() {
                         type="password"
                         value={openaiKey}
                         onChange={(e) => setOpenaiKey(e.target.value)}
-                        placeholder="sk-..."
+                        placeholder={settings?.openai_api_key ? 'sk-...••••' : 'sk-...'}
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        Your OpenAI API key is encrypted and stored securely
+                        🔒 Encrypted at rest with AES-256 • Never logged or shared
                       </p>
                     </div>
 
@@ -328,11 +328,11 @@ function SettingsContent() {
                         type="password"
                         value={claudeKey}
                         onChange={(e) => setClaudeKey(e.target.value)}
-                        placeholder="sk-ant-..."
+                        placeholder={settings?.claude_api_key ? 'sk-ant-...••••' : 'sk-ant-...'}
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        Your Claude API key is encrypted and stored securely
+                        🔒 Encrypted at rest with AES-256 • Never logged or shared
                       </p>
                     </div>
 
