@@ -70,13 +70,18 @@ function SettingsContent() {
     }
   }, [user]);
 
-  // Sync theme from database to context on initial load only
+  // Sync theme from database to context ONLY on initial load (not when settings change)
   useEffect(() => {
-    if (settings?.theme) {
-      setTheme(settings.theme as 'auto' | 'light' | 'dark');
+    if (settings?.theme && !loading) {
+      // Only sync if the DB theme differs from current context theme
+      // This prevents overriding user's theme choice during the session
+      const dbTheme = settings.theme as 'auto' | 'light' | 'dark';
+      if (dbTheme !== currentTheme) {
+        setTheme(dbTheme);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings?.theme]);
+  }, [loading]); // Only run when loading completes, not when settings change
 
   const fetchSettings = async () => {
     try {
@@ -488,12 +493,17 @@ function SettingsContent() {
                         value={currentTheme}
                         onChange={(e) => {
                           const newTheme = e.target.value as 'auto' | 'light' | 'dark';
+                          // Update context immediately for instant UI feedback
                           setTheme(newTheme);
+                          // Save to database in background (don't refetch to avoid race condition)
                           fetch('/api/settings', {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ theme: newTheme }),
-                          }).then(() => fetchSettings());
+                          }).catch((error) => {
+                            console.error('Failed to save theme to database:', error);
+                            // Could show a toast notification here
+                          });
                         }}
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
