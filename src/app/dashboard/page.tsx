@@ -46,7 +46,8 @@ export default function DashboardPage() {
 
   const [showEditor, setShowEditor] = useState(false);
   const [isCreatingNote, setIsCreatingNote] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Sidebar should be open by default for better UX (users see note list immediately)
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -156,6 +157,34 @@ export default function DashboardPage() {
     handleSearch('');
   }, [selectedTagIds, handleSearch]);
 
+  // Lock body scroll when sidebar is open on mobile
+  useEffect(() => {
+    const isMobile = window.innerWidth < 768;
+    if (sidebarOpen && isMobile) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [sidebarOpen]);
+
+  // Handle keyboard shortcuts (Escape to close sidebar on mobile)
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      const isMobile = window.innerWidth < 768;
+      if (e.key === 'Escape' && sidebarOpen && isMobile) {
+        setSidebarOpen(false);
+      }
+    };
+
+    if (sidebarOpen) {
+      window.addEventListener('keydown', handleEscape);
+      return () => window.removeEventListener('keydown', handleEscape);
+    }
+  }, [sidebarOpen]);
+
   if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -180,7 +209,7 @@ export default function DashboardPage() {
             {/* Hamburger Menu - Mobile Only */}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              className="md:hidden p-3 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               aria-label="Toggle sidebar"
             >
               <svg
@@ -241,6 +270,8 @@ export default function DashboardPage() {
           transform transition-transform duration-300 ease-in-out
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}
+        // Header height: 73px (py-4 + text height + borders)
+        // On mobile, sidebar is fixed positioned below header
         style={{ top: '73px', height: 'calc(100vh - 73px)' }}
         >
           {/* Search and Create */}
