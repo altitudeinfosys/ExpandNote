@@ -161,13 +161,29 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         <div className="flex items-center gap-3 flex-1">
+          {/* Back Arrow on Mobile, X on Desktop */}
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            aria-label="Close editor"
+            aria-label="Back to notes"
           >
+            {/* Back Arrow - Mobile */}
             <svg
-              className="w-5 h-5 text-gray-600 dark:text-gray-400"
+              className="w-6 h-6 text-gray-600 dark:text-gray-400 md:hidden"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+            {/* X Icon - Desktop */}
+            <svg
+              className="w-5 h-5 text-gray-600 dark:text-gray-400 hidden md:block"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -232,13 +248,13 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
       </div>
 
       {/* Title Input */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+      <div className="p-4 md:p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Note title (optional)"
-          className="w-full text-2xl font-bold bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+          className="w-full text-xl md:text-2xl font-bold bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 py-2"
         />
 
         {/* Tags Selector */}
@@ -255,7 +271,7 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
       </div>
 
       {/* Editor */}
-      <div className="flex-1 overflow-auto p-4 bg-gray-50 dark:bg-gray-900">
+      <div className="flex-1 overflow-auto p-3 md:p-4 bg-gray-50 dark:bg-gray-900">
         <MarkdownEditor
           key={note?.id || 'new-note'}
           value={content}

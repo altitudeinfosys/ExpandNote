@@ -46,6 +46,7 @@ export default function DashboardPage() {
 
   const [showEditor, setShowEditor] = useState(false);
   const [isCreatingNote, setIsCreatingNote] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -94,6 +95,8 @@ export default function DashboardPage() {
     (noteId: string) => {
       setSelectedNoteId(noteId);
       setShowEditor(true);
+      // Close sidebar on mobile when note is selected
+      setSidebarOpen(false);
     },
     []
   );
@@ -101,6 +104,8 @@ export default function DashboardPage() {
   const handleCloseEditor = useCallback(() => {
     setSelectedNoteId(null);
     setShowEditor(false);
+    // Open sidebar on mobile when editor is closed (going back to list)
+    setSidebarOpen(true);
   }, []);
 
   const handleSaveNote = useCallback(
@@ -171,33 +176,73 @@ export default function DashboardPage() {
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            ExpandNote
-          </h1>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600 dark:text-gray-300">
+          <div className="flex items-center gap-3">
+            {/* Hamburger Menu - Mobile Only */}
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              aria-label="Toggle sidebar"
+            >
+              <svg
+                className="w-6 h-6 text-gray-600 dark:text-gray-300"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            </button>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              ExpandNote
+            </h1>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <span className="hidden sm:block text-sm text-gray-600 dark:text-gray-300">
               {user.email}
             </span>
             <button
               onClick={() => router.push('/settings')}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
+              className="px-3 sm:px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
             >
               Settings
             </button>
             <button
               onClick={handleSignOut}
-              className="px-4 py-2 bg-gray-300 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-600 transition-colors font-medium shadow-sm border border-gray-400 dark:border-gray-600"
+              className="px-3 sm:px-4 py-2 text-sm bg-gray-300 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-600 transition-colors font-medium shadow-sm border border-gray-400 dark:border-gray-600"
             >
-              Sign Out
+              <span className="hidden sm:inline">Sign Out</span>
+              <span className="sm:hidden">Out</span>
             </button>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Backdrop Overlay - Mobile Only */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-20 md:hidden"
+            onClick={() => setSidebarOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+
         {/* Sidebar - Note List */}
-        <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+        <div className={`
+          w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col
+          md:relative md:h-full
+          fixed left-0 z-30
+          transform transition-transform duration-300 ease-in-out
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        `}
+        style={{ top: '73px', height: 'calc(100vh - 73px)' }}
+        >
           {/* Search and Create */}
           <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-3">
             <SearchBar onSearch={handleSearch} />
@@ -229,24 +274,26 @@ export default function DashboardPage() {
           </div>
 
           {/* Note List */}
-          <div className="flex-1 overflow-y-auto p-4">
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-              </div>
-            )}
-            <NoteList
-              notes={notes}
-              selectedNoteId={selectedNoteId}
-              onSelectNote={handleSelectNote}
-              onCreateNote={handleCreateNote}
-              isLoading={isLoading}
-            />
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-4 space-y-2">
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                </div>
+              )}
+              <NoteList
+                notes={notes}
+                selectedNoteId={selectedNoteId}
+                onSelectNote={handleSelectNote}
+                onCreateNote={handleCreateNote}
+                isLoading={isLoading}
+              />
+            </div>
           </div>
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col overflow-hidden">
           {showEditor && selectedNote ? (
             <NoteEditor
               note={selectedNote}
@@ -257,11 +304,11 @@ export default function DashboardPage() {
               updateNoteTags={updateNoteTags}
             />
           ) : (
-            <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-              <div className="text-center">
-                <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-8">
+              <div className="text-center max-w-md">
+                <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg
-                    className="w-12 h-12 text-gray-400 dark:text-gray-500"
+                    className="w-10 h-10 text-gray-400 dark:text-gray-500"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -274,19 +321,23 @@ export default function DashboardPage() {
                     />
                   </svg>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  Welcome to ExpandNote
+                <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                  {notes.length === 0 ? 'Start writing' : 'Select a note'}
                 </h2>
-                <p className="text-gray-600 dark:text-gray-400 mb-6">
-                  Select a note or create a new one to get started
+                <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mb-6">
+                  {notes.length === 0
+                    ? 'Create your first note to get started'
+                    : 'Choose a note from the list or create a new one'}
                 </p>
-                <button
-                  onClick={handleCreateNote}
-                  disabled={isCreatingNote}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                >
-                  Create Your First Note
-                </button>
+                {notes.length === 0 && (
+                  <button
+                    onClick={handleCreateNote}
+                    disabled={isCreatingNote}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm md:text-base"
+                  >
+                    Create Note
+                  </button>
+                )}
               </div>
             </div>
           )}
