@@ -1,8 +1,20 @@
 @import "tailwindcss";
 
+@theme {
+  --color-*: initial;
+  --breakpoint-*: initial;
+}
+
+@variant dark (&:is(.dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+}
+
+.dark {
+  --background: #111827;
+  --foreground: #f3f4f6;
 }
 
 @theme inline {
@@ -12,13 +24,6 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
@@ -26,53 +31,51 @@ body {
 }
 
 /* SimpleMDE Dark Mode Styles */
-@media (prefers-color-scheme: dark) {
-  .markdown-editor .CodeMirror {
-    background-color: #1f2937;
-    color: #f9fafb;
-    border-color: #374151;
-  }
+.dark .markdown-editor .CodeMirror {
+  background-color: #1f2937;
+  color: #f9fafb;
+  border-color: #374151;
+}
 
-  .markdown-editor .CodeMirror-cursor {
-    border-left-color: #f9fafb;
-  }
+.dark .markdown-editor .CodeMirror-cursor {
+  border-left-color: #f9fafb;
+}
 
-  .markdown-editor .CodeMirror-selected {
-    background: #374151;
-  }
+.dark .markdown-editor .CodeMirror-selected {
+  background: #374151;
+}
 
-  .markdown-editor .editor-toolbar {
-    background-color: #111827;
-    border-color: #374151;
-  }
+.dark .markdown-editor .editor-toolbar {
+  background-color: #111827;
+  border-color: #374151;
+}
 
-  .markdown-editor .editor-toolbar a {
-    color: #9ca3af !important;
-  }
+.dark .markdown-editor .editor-toolbar a {
+  color: #9ca3af !important;
+}
 
-  .markdown-editor .editor-toolbar a:hover,
-  .markdown-editor .editor-toolbar a.active {
-    background-color: #374151;
-    color: #f9fafb !important;
-    border-color: #4b5563;
-  }
+.dark .markdown-editor .editor-toolbar a:hover,
+.dark .markdown-editor .editor-toolbar a.active {
+  background-color: #374151;
+  color: #f9fafb !important;
+  border-color: #4b5563;
+}
 
-  .markdown-editor .editor-toolbar i.separator {
-    border-left-color: #374151;
-    border-right-color: #4b5563;
-  }
+.dark .markdown-editor .editor-toolbar i.separator {
+  border-left-color: #374151;
+  border-right-color: #4b5563;
+}
 
-  .markdown-editor .editor-preview,
-  .markdown-editor .editor-preview-side {
-    background-color: #1f2937;
-    color: #f9fafb;
-  }
+.dark .markdown-editor .editor-preview,
+.dark .markdown-editor .editor-preview-side {
+  background-color: #1f2937;
+  color: #f9fafb;
+}
 
-  .markdown-editor .editor-preview pre,
-  .markdown-editor .editor-preview-side pre {
-    background-color: #111827;
-    color: #f9fafb;
-  }
+.dark .markdown-editor .editor-preview pre,
+.dark .markdown-editor .editor-preview-side pre {
+  background-color: #111827;
+  color: #f9fafb;
 }
 
 /* SimpleMDE General Styles */
