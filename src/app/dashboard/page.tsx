@@ -48,6 +48,7 @@ export default function DashboardPage() {
   const [isCreatingNote, setIsCreatingNote] = useState(false);
   // Sidebar should be open by default for better UX (users see note list immediately)
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -157,33 +158,54 @@ export default function DashboardPage() {
     handleSearch('');
   }, [selectedTagIds, handleSearch]);
 
-  // Lock body scroll when sidebar is open on mobile
+  // Detect mobile viewport and handle window resize
   useEffect(() => {
-    const isMobile = window.innerWidth < 768;
-    if (sidebarOpen && isMobile) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [sidebarOpen]);
+    // Check if window is defined (SSR safety)
+    if (typeof window === 'undefined') return;
 
-  // Handle keyboard shortcuts (Escape to close sidebar on mobile)
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      const isMobile = window.innerWidth < 768;
-      if (e.key === 'Escape' && sidebarOpen && isMobile) {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+
+      // On initial mobile load, close sidebar for better UX
+      if (mobile && !selectedNoteId) {
         setSidebarOpen(false);
       }
     };
 
+    // Initial check
+    checkMobile();
+
+    // Handle resize
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Lock body scroll and handle keyboard when sidebar is open on mobile
+  useEffect(() => {
+    if (!isMobile) return;
+
+    // Scroll lock
     if (sidebarOpen) {
-      window.addEventListener('keydown', handleEscape);
-      return () => window.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
     }
-  }, [sidebarOpen]);
+
+    // Keyboard handler
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && sidebarOpen) {
+        setSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+
+    return () => {
+      window.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = '';
+    };
+  }, [sidebarOpen, isMobile]);
 
   if (authLoading) {
     return (
@@ -254,9 +276,10 @@ export default function DashboardPage() {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden relative">
         {/* Backdrop Overlay - Mobile Only */}
-        {sidebarOpen && (
+        {sidebarOpen && isMobile && (
           <div
-            className="fixed inset-0 bg-black/50 z-20 md:hidden"
+            className="fixed left-0 right-0 bottom-0 bg-black/50 z-20 md:hidden"
+            style={{ top: '73px' }}
             onClick={() => setSidebarOpen(false)}
             aria-hidden="true"
           />

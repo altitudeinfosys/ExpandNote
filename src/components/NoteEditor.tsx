@@ -248,7 +248,7 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
       </div>
 
       {/* Title Input */}
-      <div className="p-4 md:p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         <input
           type="text"
           value={title}
