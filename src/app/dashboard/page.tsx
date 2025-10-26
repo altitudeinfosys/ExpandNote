@@ -46,9 +46,16 @@ export default function DashboardPage() {
 
   const [showEditor, setShowEditor] = useState(false);
   const [isCreatingNote, setIsCreatingNote] = useState(false);
-  // Sidebar should be open by default for better UX (users see note list immediately)
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Initialize sidebar state based on viewport to prevent hydration mismatch
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    if (typeof window === 'undefined') return true; // SSR default
+    return window.innerWidth >= 768; // Desktop: open, Mobile: closed
+  });
   const [isMobile, setIsMobile] = useState(false);
+
+  // Constants for responsive breakpoints and layout
+  const MOBILE_BREAKPOINT = 768; // Matches Tailwind's 'md' breakpoint
+  const HEADER_HEIGHT = 73; // px - header height (py-4 + text + borders)
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -164,13 +171,9 @@ export default function DashboardPage() {
     if (typeof window === 'undefined') return;
 
     const checkMobile = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-
-      // On initial mobile load, close sidebar for better UX
-      if (mobile && !selectedNoteId) {
-        setSidebarOpen(false);
-      }
+      const mobile = window.innerWidth < MOBILE_BREAKPOINT;
+      // Only update if state actually changed to prevent unnecessary rerenders
+      setIsMobile(prev => prev !== mobile ? mobile : prev);
     };
 
     // Initial check
@@ -179,7 +182,7 @@ export default function DashboardPage() {
     // Handle resize
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [MOBILE_BREAKPOINT]);
 
   // Lock body scroll and handle keyboard when sidebar is open on mobile
   useEffect(() => {
@@ -231,8 +234,9 @@ export default function DashboardPage() {
             {/* Hamburger Menu - Mobile Only */}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="md:hidden p-3 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              className="md:hidden p-3 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none rounded-lg transition-colors"
               aria-label="Toggle sidebar"
+              aria-expanded={sidebarOpen}
             >
               <svg
                 className="w-6 h-6 text-gray-600 dark:text-gray-300"
@@ -279,23 +283,25 @@ export default function DashboardPage() {
         {sidebarOpen && isMobile && (
           <div
             className="fixed left-0 right-0 bottom-0 bg-black/50 z-20 md:hidden"
-            style={{ top: '73px' }}
+            style={{ top: `${HEADER_HEIGHT}px` }}
             onClick={() => setSidebarOpen(false)}
             aria-hidden="true"
           />
         )}
 
         {/* Sidebar - Note List */}
-        <div className={`
-          w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col
-          md:relative md:h-full
-          fixed left-0 z-30
-          transform transition-transform duration-300 ease-in-out
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-        `}
-        // Header height: 73px (py-4 + text height + borders)
-        // On mobile, sidebar is fixed positioned below header
-        style={{ top: '73px', height: 'calc(100vh - 73px)' }}
+        <div
+          className={`
+            w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col
+            md:relative md:h-full
+            fixed left-0 z-30
+            transform will-change-transform transition-transform duration-300 ease-in-out
+            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+          `}
+          // On mobile, sidebar is fixed positioned below header
+          style={{ top: `${HEADER_HEIGHT}px`, height: `calc(100vh - ${HEADER_HEIGHT}px)` }}
+          role={isMobile ? "dialog" : undefined}
+          aria-modal={isMobile && sidebarOpen ? "true" : undefined}
         >
           {/* Search and Create */}
           <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-3">
