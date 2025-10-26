@@ -10,6 +10,10 @@ import { NoteEditor } from '@/components/NoteEditor';
 import { SearchBar } from '@/components/SearchBar';
 import { TagFilter } from '@/components/TagFilter';
 
+// Constants for responsive breakpoints and layout (defined outside component to prevent recreation)
+const MOBILE_BREAKPOINT = 768; // Matches Tailwind's 'md' breakpoint
+const HEADER_HEIGHT = 73; // px - header height (py-4 + text + borders)
+
 export default function DashboardPage() {
   const { user, loading: authLoading, signOut } = useAuth();
   const router = useRouter();
@@ -49,13 +53,13 @@ export default function DashboardPage() {
   // Initialize sidebar state based on viewport to prevent hydration mismatch
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     if (typeof window === 'undefined') return true; // SSR default
-    return window.innerWidth >= 768; // Desktop: open, Mobile: closed
+    return window.innerWidth >= MOBILE_BREAKPOINT; // Desktop: open, Mobile: closed
   });
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Constants for responsive breakpoints and layout
-  const MOBILE_BREAKPOINT = 768; // Matches Tailwind's 'md' breakpoint
-  const HEADER_HEIGHT = 73; // px - header height (py-4 + text + borders)
+  // Initialize isMobile with same check to prevent flash of incorrect UI
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false; // SSR default
+    return window.innerWidth < MOBILE_BREAKPOINT;
+  });
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -165,10 +169,12 @@ export default function DashboardPage() {
     handleSearch('');
   }, [selectedTagIds, handleSearch]);
 
-  // Detect mobile viewport and handle window resize
+  // Detect mobile viewport and handle window resize with throttling
   useEffect(() => {
     // Check if window is defined (SSR safety)
     if (typeof window === 'undefined') return;
+
+    let timeoutId: NodeJS.Timeout;
 
     const checkMobile = () => {
       const mobile = window.innerWidth < MOBILE_BREAKPOINT;
@@ -176,13 +182,22 @@ export default function DashboardPage() {
       setIsMobile(prev => prev !== mobile ? mobile : prev);
     };
 
+    // Throttled resize handler (150ms delay to reduce event frequency)
+    const handleResize = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(checkMobile, 150);
+    };
+
     // Initial check
     checkMobile();
 
-    // Handle resize
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, [MOBILE_BREAKPOINT]);
+    // Handle resize with throttling
+    window.addEventListener('resize', handleResize);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   // Lock body scroll and handle keyboard when sidebar is open on mobile
   useEffect(() => {
