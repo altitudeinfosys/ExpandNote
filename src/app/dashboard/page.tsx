@@ -142,15 +142,14 @@ export default function DashboardPage() {
   const handleDeleteNote = useCallback(
     async (noteId: string) => {
       try {
-        // Close the editor first to prevent any state issues
-        handleCloseEditor();
-
         await deleteNoteById(noteId);
-        // Refetch notes to ensure UI is in sync with backend
-        await fetchNotes();
+        // Close the editor after successful delete
+        handleCloseEditor();
       } catch (error) {
         console.error('Failed to delete note:', error);
-        // Refetch anyway to ensure UI consistency
+        alert('Failed to delete note. Please try again.');
+      } finally {
+        // Always refetch notes to ensure UI is in sync with backend
         await fetchNotes();
       }
     },
