@@ -53,55 +53,30 @@ export function TagFilter({ className = '' }: TagFilterProps) {
 
   return (
     <div className={className}>
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-          Filter by Tags
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+          TAGS
         </h3>
         {selectedTagIds.length > 0 && (
           <button
             onClick={() => clearTagSelection()}
-            className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+            className="text-xs text-blue-400 hover:text-blue-300"
           >
-            Clear ({selectedTagIds.length})
+            Clear
           </button>
         )}
       </div>
 
-      {/* Search input */}
-      <div className="relative mb-2">
-        <input
-          type="text"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          placeholder="Search tags..."
-          className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500"
-        />
-        {filter && (
-          <button
-            onClick={() => setFilter('')}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-              <path
-                fillRule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </button>
-        )}
-      </div>
-
-      {/* Tags list */}
+      {/* Tags list - Simplenote style */}
       {isLoading ? (
         <div className="py-4 text-center">
-          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500 mx-auto"></div>
         </div>
       ) : (
-        <div className="space-y-1 max-h-64 overflow-y-auto pr-1">
-          {displayedTags.length === 0 && (
-            <div className="py-2 text-center text-sm text-gray-500 dark:text-gray-400">
-              {filter ? 'No matching tags found' : 'No tags yet'}
+        <div className="space-y-0.5">
+          {filteredTags.length === 0 && (
+            <div className="py-2 text-sm text-gray-400">
+              {filter ? 'No matching tags' : 'No tags yet'}
             </div>
           )}
           {displayedTags.map((tag) => (
@@ -116,9 +91,9 @@ export function TagFilter({ className = '' }: TagFilterProps) {
           {showMoreButton && !showMore && (
             <button
               onClick={() => setShowMore(true)}
-              className="w-full py-1 text-xs text-center text-blue-600 dark:text-blue-400 hover:underline"
+              className="w-full py-2 text-sm text-left text-gray-400 hover:text-gray-200"
             >
-              Show more ({filteredTags.length - 10} more)
+              Show {filteredTags.length - 10} more...
             </button>
           )}
         </div>
@@ -139,29 +114,30 @@ function TagFilterItem({ tag, isSelected, onToggle, onDelete }: TagFilterItemPro
 
   return (
     <div
-      className="relative"
+      className="relative group"
       onMouseEnter={() => setShowDelete(true)}
       onMouseLeave={() => setShowDelete(false)}
     >
       <div
-        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm cursor-pointer ${
+        onClick={onToggle}
+        className={`w-full flex items-center justify-between py-1.5 text-sm cursor-pointer transition-colors ${
           isSelected
-            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
-            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+            ? 'text-white font-medium'
+            : 'text-gray-400 hover:text-gray-200'
         }`}
       >
-        <span className="truncate" onClick={onToggle}>#{tag.name}</span>
-        <div className="flex items-center gap-2">
+        <span className="truncate">{tag.name}</span>
+        <div className="flex items-center gap-1">
           {showDelete && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete();
               }}
-              className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 z-10"
+              className="p-0.5 rounded hover:bg-red-900/30 text-red-400"
               title="Delete tag"
             >
-              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                 <path
                   fillRule="evenodd"
                   d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
@@ -170,29 +146,6 @@ function TagFilterItem({ tag, isSelected, onToggle, onDelete }: TagFilterItemPro
               </svg>
             </button>
           )}
-          <button
-            onClick={onToggle}
-            className={`w-4 h-4 flex-shrink-0 rounded-full border ${
-              isSelected
-                ? 'bg-blue-600 border-blue-600 flex items-center justify-center'
-                : 'border-gray-400 dark:border-gray-500'
-            }`}
-            aria-label={isSelected ? 'Unselect tag' : 'Select tag'}
-          >
-            {isSelected && (
-              <svg
-                className="w-3 h-3 text-white"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            )}
-          </button>
         </div>
       </div>
     </div>
