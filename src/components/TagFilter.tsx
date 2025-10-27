@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Tag } from '@/types';
 import { useTags } from '@/hooks/useTags';
 
@@ -34,17 +34,18 @@ export function TagFilter({ className = '' }: TagFilterProps) {
     }
   };
 
-  // Sort tags (selected first, then alphabetically)
-  const sortedTags = tags
-    .sort((a, b) => {
-      // Show selected tags first, then alphabetically
-      const aSelected = selectedTagIds.includes(a.id);
-      const bSelected = selectedTagIds.includes(b.id);
+  // Sort tags (selected first, then alphabetically) - optimized with Set and memoization
+  const sortedTags = useMemo(() => {
+    const selectedSet = new Set(selectedTagIds); // O(1) lookups instead of O(n)
+    return [...tags].sort((a, b) => {  // Spread to avoid mutating original array
+      const aSelected = selectedSet.has(a.id);
+      const bSelected = selectedSet.has(b.id);
 
       if (aSelected && !bSelected) return -1;
       if (!aSelected && bSelected) return 1;
       return a.name.localeCompare(b.name);
     });
+  }, [tags, selectedTagIds]);
 
   const displayedTags = showMore
     ? sortedTags
@@ -112,24 +113,19 @@ interface TagFilterItemProps {
 
 function TagFilterItem({ tag, isSelected, onToggle, onDelete }: TagFilterItemProps) {
   const [showDelete, setShowDelete] = useState(false);
+  const [isTouchDevice] = useState(() =>
+    typeof window !== 'undefined' && 'ontouchstart' in window
+  );
 
   return (
     <div
-      className="relative group"
-      onMouseEnter={() => setShowDelete(true)}
-      onMouseLeave={() => setShowDelete(false)}
+      className="relative group flex items-center gap-1"
+      onMouseEnter={() => !isTouchDevice && setShowDelete(true)}
+      onMouseLeave={() => !isTouchDevice && setShowDelete(false)}
     >
-      <div
+      <button
         onClick={onToggle}
-        onKeyDown={(e: React.KeyboardEvent) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onToggle();
-          }
-        }}
-        role="button"
-        tabIndex={0}
-        className={`w-full flex items-center justify-between py-1.5 text-sm cursor-pointer transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+        className={`flex-1 flex items-center justify-between py-1.5 text-sm cursor-pointer transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500 rounded px-1 ${
           isSelected
             ? 'text-white font-medium'
             : 'text-gray-400 hover:text-gray-200'
@@ -138,28 +134,25 @@ function TagFilterItem({ tag, isSelected, onToggle, onDelete }: TagFilterItemPro
         aria-label={`Filter by ${tag.name}${isSelected ? ' - selected' : ''}`}
       >
         <span className="truncate">{tag.name}</span>
-        <div className="flex items-center gap-1">
-          {showDelete && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
-              className="p-0.5 rounded hover:bg-red-900/30 text-red-400 focus:outline-none focus:ring-1 focus:ring-red-400"
-              title="Delete tag"
-              aria-label={`Delete ${tag.name} tag`}
-            >
-              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                <path
-                  fillRule="evenodd"
-                  d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </button>
-          )}
-        </div>
-      </div>
+      </button>
+
+      {/* Always show delete button on touch devices, show on hover for desktop */}
+      {(showDelete || isTouchDevice) && (
+        <button
+          onClick={onDelete}
+          className="p-1 rounded hover:bg-red-900/30 text-red-400 focus:outline-none focus:ring-1 focus:ring-red-400 transition-opacity"
+          title="Delete tag"
+          aria-label={`Delete ${tag.name} tag`}
+        >
+          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fillRule="evenodd"
+              d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }

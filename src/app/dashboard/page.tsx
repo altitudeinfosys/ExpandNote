@@ -186,6 +186,8 @@ export default function DashboardPage() {
       // Only update state if component is still mounted
       if (!isMounted) return;
 
+      // Use < MOBILE_BREAKPOINT (1024) to match Tailwind's lg: breakpoint behavior
+      // lg: applies at 1024px and above, so mobile is anything below 1024
       const mobile = window.innerWidth < MOBILE_BREAKPOINT;
       // Only update if state actually changed to prevent unnecessary rerenders
       setIsMobile(prev => prev !== mobile ? mobile : prev);
@@ -316,10 +318,11 @@ export default function DashboardPage() {
           className={`
             bg-gray-900 dark:bg-black border-r border-gray-700 dark:border-gray-800 flex flex-col
             ${isMobile
-              ? `fixed left-0 top-[${MOBILE_HEADER_HEIGHT}px] bottom-0 z-30 w-64 transform will-change-transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
+              ? `fixed left-0 bottom-0 z-30 w-64 transform will-change-transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
               : 'w-64 flex-shrink-0 h-full'
             }
           `}
+          style={isMobile ? { top: `${MOBILE_HEADER_HEIGHT}px` } : undefined}
           role={isMobile ? "dialog" : undefined}
           aria-modal={isMobile && sidebarOpen ? "true" : undefined}
         >
