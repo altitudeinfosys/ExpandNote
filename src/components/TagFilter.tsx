@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { Tag } from '@/types';
 import { useTags } from '@/hooks/useTags';
 
+// Constants
+const MAX_TAGS_DISPLAY = 10; // Number of tags to show before "Show more" button
+
 interface TagFilterProps {
   className?: string;
 }
@@ -19,7 +22,6 @@ export function TagFilter({ className = '' }: TagFilterProps) {
   } = useTags();
 
   const [showMore, setShowMore] = useState(false);
-  const [filter, setFilter] = useState('');
 
   const handleDeleteTag = async (tagId: string, tagName: string) => {
     if (window.confirm(`Are you sure you want to delete the tag "#${tagName}"? This will remove it from all notes.`)) {
@@ -32,9 +34,8 @@ export function TagFilter({ className = '' }: TagFilterProps) {
     }
   };
 
-  // Filter and sort tags
-  const filteredTags = tags
-    .filter((tag) => tag.name.toLowerCase().includes(filter.toLowerCase()))
+  // Sort tags (selected first, then alphabetically)
+  const sortedTags = tags
     .sort((a, b) => {
       // Show selected tags first, then alphabetically
       const aSelected = selectedTagIds.includes(a.id);
@@ -46,10 +47,10 @@ export function TagFilter({ className = '' }: TagFilterProps) {
     });
 
   const displayedTags = showMore
-    ? filteredTags
-    : filteredTags.slice(0, Math.min(10, filteredTags.length));
+    ? sortedTags
+    : sortedTags.slice(0, Math.min(MAX_TAGS_DISPLAY, sortedTags.length));
 
-  const showMoreButton = filteredTags.length > 10;
+  const showMoreButton = sortedTags.length > MAX_TAGS_DISPLAY;
 
   return (
     <div className={className}>
@@ -74,9 +75,9 @@ export function TagFilter({ className = '' }: TagFilterProps) {
         </div>
       ) : (
         <div className="space-y-0.5">
-          {filteredTags.length === 0 && (
+          {sortedTags.length === 0 && (
             <div className="py-2 text-sm text-gray-400">
-              {filter ? 'No matching tags' : 'No tags yet'}
+              No tags yet
             </div>
           )}
           {displayedTags.map((tag) => (
@@ -93,7 +94,7 @@ export function TagFilter({ className = '' }: TagFilterProps) {
               onClick={() => setShowMore(true)}
               className="w-full py-2 text-sm text-left text-gray-400 hover:text-gray-200"
             >
-              Show {filteredTags.length - 10} more...
+              Show {sortedTags.length - MAX_TAGS_DISPLAY} more...
             </button>
           )}
         </div>
@@ -120,11 +121,21 @@ function TagFilterItem({ tag, isSelected, onToggle, onDelete }: TagFilterItemPro
     >
       <div
         onClick={onToggle}
-        className={`w-full flex items-center justify-between py-1.5 text-sm cursor-pointer transition-colors ${
+        onKeyDown={(e: React.KeyboardEvent) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onToggle();
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        className={`w-full flex items-center justify-between py-1.5 text-sm cursor-pointer transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500 ${
           isSelected
             ? 'text-white font-medium'
             : 'text-gray-400 hover:text-gray-200'
         }`}
+        aria-pressed={isSelected}
+        aria-label={`Filter by ${tag.name}${isSelected ? ' - selected' : ''}`}
       >
         <span className="truncate">{tag.name}</span>
         <div className="flex items-center gap-1">
@@ -134,8 +145,9 @@ function TagFilterItem({ tag, isSelected, onToggle, onDelete }: TagFilterItemPro
                 e.stopPropagation();
                 onDelete();
               }}
-              className="p-0.5 rounded hover:bg-red-900/30 text-red-400"
+              className="p-0.5 rounded hover:bg-red-900/30 text-red-400 focus:outline-none focus:ring-1 focus:ring-red-400"
               title="Delete tag"
+              aria-label={`Delete ${tag.name} tag`}
             >
               <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                 <path

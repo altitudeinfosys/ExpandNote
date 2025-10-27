@@ -12,6 +12,8 @@ import { TagFilter } from '@/components/TagFilter';
 
 // Constants for responsive breakpoints and layout (defined outside component to prevent recreation)
 const MOBILE_BREAKPOINT = 1024; // Matches Tailwind's 'lg' breakpoint for three-column layout
+const RESIZE_THROTTLE_MS = 150; // Throttle resize events to prevent excessive re-renders
+const MOBILE_HEADER_HEIGHT = 57; // Height of mobile header in pixels
 
 export default function DashboardPage() {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -178,17 +180,21 @@ export default function DashboardPage() {
     if (typeof window === 'undefined') return;
 
     let timeoutId: NodeJS.Timeout;
+    let isMounted = true;
 
     const checkMobile = () => {
+      // Only update state if component is still mounted
+      if (!isMounted) return;
+
       const mobile = window.innerWidth < MOBILE_BREAKPOINT;
       // Only update if state actually changed to prevent unnecessary rerenders
       setIsMobile(prev => prev !== mobile ? mobile : prev);
     };
 
-    // Throttled resize handler (150ms delay to reduce event frequency)
+    // Throttled resize handler to reduce event frequency
     const handleResize = () => {
       clearTimeout(timeoutId);
-      timeoutId = setTimeout(checkMobile, 150);
+      timeoutId = setTimeout(checkMobile, RESIZE_THROTTLE_MS);
     };
 
     // Initial check
@@ -197,6 +203,7 @@ export default function DashboardPage() {
     // Handle resize with throttling
     window.addEventListener('resize', handleResize);
     return () => {
+      isMounted = false;
       clearTimeout(timeoutId);
       window.removeEventListener('resize', handleResize);
     };
@@ -309,7 +316,7 @@ export default function DashboardPage() {
           className={`
             bg-gray-900 dark:bg-black border-r border-gray-700 dark:border-gray-800 flex flex-col
             ${isMobile
-              ? `fixed left-0 top-0 bottom-0 z-30 w-64 transform will-change-transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
+              ? `fixed left-0 top-[${MOBILE_HEADER_HEIGHT}px] bottom-0 z-30 w-64 transform will-change-transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
               : 'w-64 flex-shrink-0 h-full'
             }
           `}
