@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotes } from '@/hooks/useNotes';
@@ -168,11 +168,22 @@ export default function DashboardPage() {
   );
 
   // Refilter notes when selected tags change
+  // Use a ref to track previous tag IDs and prevent infinite loop
+  const prevSelectedTagIds = useRef<string[]>([]);
   useEffect(() => {
-    // When tag selection changes, reapply the filter
-    // This will trigger a new search with the current query and updated tag selection
-    handleSearch('');
-  }, [selectedTagIds, handleSearch]);
+    // Only trigger search if tags actually changed (not just reference)
+    const tagsChanged =
+      prevSelectedTagIds.current.length !== selectedTagIds.length ||
+      prevSelectedTagIds.current.some((id, index) => id !== selectedTagIds[index]);
+
+    if (tagsChanged) {
+      prevSelectedTagIds.current = selectedTagIds;
+      // When tag selection changes, reapply the filter with empty query
+      searchNotes('', {
+        tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined
+      });
+    }
+  }, [selectedTagIds, searchNotes]);
 
   // Detect mobile viewport and handle window resize with throttling
   useEffect(() => {
