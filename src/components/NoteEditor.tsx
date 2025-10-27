@@ -248,30 +248,18 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
       </div>
 
       {/* Title Input */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Note title (optional)"
-          className="w-full text-xl md:text-2xl font-bold bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 py-2"
+          className="w-full text-xl md:text-2xl font-bold bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
         />
-
-        {/* Tags Selector */}
-        {note && (
-          <div className="mt-3">
-            <TagSelector
-              selectedTags={selectedTags}
-              onTagsChange={handleTagsChange}
-              disabled={isSaving}
-              className="mt-2"
-            />
-          </div>
-        )}
       </div>
 
       {/* Editor */}
-      <div className="flex-1 overflow-auto p-3 md:p-4 bg-gray-50 dark:bg-gray-900">
+      <div className="flex-1 overflow-auto px-4 py-3 bg-white dark:bg-gray-900">
         <MarkdownEditor
           key={note?.id || 'new-note'}
           value={content}
@@ -280,6 +268,17 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
           autoFocus={!note}
         />
       </div>
+
+      {/* Tags Selector - Bottom like Simplenote */}
+      {note && (
+        <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-3 bg-white dark:bg-gray-800">
+          <TagSelector
+            selectedTags={selectedTags}
+            onTagsChange={handleTagsChange}
+            disabled={isSaving}
+          />
+        </div>
+      )}
     </div>
   );
 }

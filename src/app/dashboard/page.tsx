@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotes } from '@/hooks/useNotes';
@@ -11,8 +11,9 @@ import { SearchBar } from '@/components/SearchBar';
 import { TagFilter } from '@/components/TagFilter';
 
 // Constants for responsive breakpoints and layout (defined outside component to prevent recreation)
-const MOBILE_BREAKPOINT = 768; // Matches Tailwind's 'md' breakpoint
-const HEADER_HEIGHT = 73; // px - header height (py-4 + text + borders)
+const MOBILE_BREAKPOINT = 1024; // Matches Tailwind's 'lg' breakpoint for three-column layout
+const RESIZE_THROTTLE_MS = 150; // Throttle resize events to prevent excessive re-renders
+const MOBILE_HEADER_HEIGHT = 57; // Height of mobile header in pixels
 
 export default function DashboardPage() {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -109,17 +110,21 @@ export default function DashboardPage() {
       setSelectedNoteId(noteId);
       setShowEditor(true);
       // Close sidebar on mobile when note is selected
-      setSidebarOpen(false);
+      if (isMobile) {
+        setSidebarOpen(false);
+      }
     },
-    []
+    [isMobile]
   );
 
   const handleCloseEditor = useCallback(() => {
     setSelectedNoteId(null);
     setShowEditor(false);
     // Open sidebar on mobile when editor is closed (going back to list)
-    setSidebarOpen(true);
-  }, []);
+    if (isMobile) {
+      setSidebarOpen(true);
+    }
+  }, [isMobile]);
 
   const handleSaveNote = useCallback(
     async (noteData: {
@@ -137,15 +142,14 @@ export default function DashboardPage() {
   const handleDeleteNote = useCallback(
     async (noteId: string) => {
       try {
-        // Close the editor first to prevent any state issues
-        handleCloseEditor();
-
         await deleteNoteById(noteId);
-        // Refetch notes to ensure UI is in sync with backend
-        await fetchNotes();
+        // Close the editor after successful delete
+        handleCloseEditor();
       } catch (error) {
         console.error('Failed to delete note:', error);
-        // Refetch anyway to ensure UI consistency
+        alert('Failed to delete note. Please try again.');
+      } finally {
+        // Always refetch notes to ensure UI is in sync with backend
         await fetchNotes();
       }
     },
@@ -163,11 +167,22 @@ export default function DashboardPage() {
   );
 
   // Refilter notes when selected tags change
+  // Use a ref to track previous tag IDs and prevent infinite loop
+  const prevSelectedTagIds = useRef<string[]>([]);
   useEffect(() => {
-    // When tag selection changes, reapply the filter
-    // This will trigger a new search with the current query and updated tag selection
-    handleSearch('');
-  }, [selectedTagIds, handleSearch]);
+    // Only trigger search if tags actually changed (not just reference)
+    const tagsChanged =
+      prevSelectedTagIds.current.length !== selectedTagIds.length ||
+      prevSelectedTagIds.current.some((id, index) => id !== selectedTagIds[index]);
+
+    if (tagsChanged) {
+      prevSelectedTagIds.current = selectedTagIds;
+      // When tag selection changes, reapply the filter with empty query
+      searchNotes('', {
+        tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined
+      });
+    }
+  }, [selectedTagIds, searchNotes]);
 
   // Detect mobile viewport and handle window resize with throttling
   useEffect(() => {
@@ -175,17 +190,23 @@ export default function DashboardPage() {
     if (typeof window === 'undefined') return;
 
     let timeoutId: NodeJS.Timeout;
+    let isMounted = true;
 
     const checkMobile = () => {
+      // Only update state if component is still mounted
+      if (!isMounted) return;
+
+      // Use < MOBILE_BREAKPOINT (1024) to match Tailwind's lg: breakpoint behavior
+      // lg: applies at 1024px and above, so mobile is anything below 1024
       const mobile = window.innerWidth < MOBILE_BREAKPOINT;
       // Only update if state actually changed to prevent unnecessary rerenders
       setIsMobile(prev => prev !== mobile ? mobile : prev);
     };
 
-    // Throttled resize handler (150ms delay to reduce event frequency)
+    // Throttled resize handler to reduce event frequency
     const handleResize = () => {
       clearTimeout(timeoutId);
-      timeoutId = setTimeout(checkMobile, 150);
+      timeoutId = setTimeout(checkMobile, RESIZE_THROTTLE_MS);
     };
 
     // Initial check
@@ -194,6 +215,7 @@ export default function DashboardPage() {
     // Handle resize with throttling
     window.addEventListener('resize', handleResize);
     return () => {
+      isMounted = false;
       clearTimeout(timeoutId);
       window.removeEventListener('resize', handleResize);
     };
@@ -242,133 +264,181 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            {/* Hamburger Menu - Mobile Only */}
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="md:hidden p-3 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none rounded-lg transition-colors"
-              aria-label="Toggle sidebar"
-              aria-expanded={sidebarOpen}
+      {/* Mobile Header */}
+      <header className="lg:hidden bg-gray-900 dark:bg-black border-b border-gray-700 dark:border-gray-800">
+        <div className="px-4 py-3 flex justify-between items-center">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-2 hover:bg-gray-800 dark:hover:bg-gray-900 rounded transition-colors"
+            aria-label="Toggle menu"
+          >
+            <svg
+              className="w-6 h-6 text-gray-300"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              <svg
-                className="w-6 h-6 text-gray-600 dark:text-gray-300"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
-            </button>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              ExpandNote
-            </h1>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-4">
-            <span className="hidden sm:block text-sm text-gray-600 dark:text-gray-300">
-              {user.email}
-            </span>
-            <button
-              onClick={() => router.push('/settings')}
-              className="px-3 sm:px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6h16M4 12h16M4 18h16"
+              />
+            </svg>
+          </button>
+          <h1 className="text-lg font-semibold text-white">
+            All Notes
+          </h1>
+          <button
+            onClick={handleCreateNote}
+            disabled={isCreatingNote}
+            className="p-2 hover:bg-gray-800 dark:hover:bg-gray-900 rounded transition-colors"
+            aria-label="New note"
+          >
+            <svg
+              className="w-6 h-6 text-blue-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              Settings
-            </button>
-            <button
-              onClick={handleSignOut}
-              className="px-3 sm:px-4 py-2 text-sm bg-gray-300 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-600 transition-colors font-medium shadow-sm border border-gray-400 dark:border-gray-600"
-            >
-              <span className="hidden sm:inline">Sign Out</span>
-              <span className="sm:hidden">Out</span>
-            </button>
-          </div>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+          </button>
         </div>
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex flex-row overflow-hidden relative">
         {/* Backdrop Overlay - Mobile Only */}
         {sidebarOpen && isMobile && (
           <div
-            className="fixed left-0 right-0 bottom-0 bg-black/50 z-20 md:hidden"
-            style={{ top: `${HEADER_HEIGHT}px` }}
+            className="fixed inset-0 bg-black/70 z-20 lg:hidden"
             onClick={() => setSidebarOpen(false)}
             aria-hidden="true"
           />
         )}
 
-        {/* Sidebar - Note List */}
+        {/* LEFT COLUMN: Navigation & Tags (Desktop ~15%, Mobile drawer) */}
         <div
           className={`
-            w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col
-            md:relative md:h-full
-            fixed left-0 z-30
-            transform will-change-transform transition-transform duration-300 ease-in-out
-            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+            bg-gray-900 dark:bg-black border-r border-gray-700 dark:border-gray-800 flex flex-col
+            ${isMobile
+              ? `fixed left-0 bottom-0 z-30 w-64 transform will-change-transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
+              : 'w-64 flex-shrink-0 h-full'
+            }
           `}
-          // On mobile, sidebar is fixed positioned below header
-          style={{ top: `${HEADER_HEIGHT}px`, height: `calc(100vh - ${HEADER_HEIGHT}px)` }}
+          style={isMobile ? { top: `${MOBILE_HEADER_HEIGHT}px` } : undefined}
           role={isMobile ? "dialog" : undefined}
           aria-modal={isMobile && sidebarOpen ? "true" : undefined}
         >
-          {/* Search and Create */}
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-3">
-            <SearchBar onSearch={handleSearch} />
-            <button
-              onClick={handleCreateNote}
-              disabled={isCreatingNote}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center justify-center gap-2"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v16m8-8H4"
-                />
+          {/* Navigation Items */}
+          <nav className="py-4">
+            <button className="w-full px-4 py-2.5 flex items-center gap-3 text-white bg-gray-800 dark:bg-gray-900 border-l-4 border-blue-500">
+              <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd"/>
               </svg>
-              {isCreatingNote ? 'Creating...' : 'New Note'}
+              <span className="font-medium">All Notes</span>
             </button>
+            <button className="w-full px-4 py-2.5 flex items-center gap-3 text-gray-400 hover:text-white hover:bg-gray-800 dark:hover:bg-gray-900 transition-colors">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd"/>
+              </svg>
+              <span className="font-medium">Trash</span>
+            </button>
+            <button
+              onClick={() => router.push('/settings')}
+              className="w-full px-4 py-2.5 flex items-center gap-3 text-gray-400 hover:text-white hover:bg-gray-800 dark:hover:bg-gray-900 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd"/>
+              </svg>
+              <span className="font-medium">Settings</span>
+            </button>
+          </nav>
+
+          {/* Tags Section */}
+          <div className="flex-1 overflow-y-auto px-4 py-3 border-t border-gray-700 dark:border-gray-800">
+            <TagFilter />
           </div>
 
-          {/* Tag Filter */}
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-            <TagFilter />
+          {/* User Info - Desktop Only */}
+          <div className="hidden lg:block px-4 py-3 border-t border-gray-700 dark:border-gray-800">
+            <div className="text-xs text-gray-400 truncate">{user.email}</div>
+            <button
+              onClick={handleSignOut}
+              className="mt-2 text-xs text-blue-400 hover:text-blue-300"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+
+        {/* MIDDLE COLUMN: Note List (Desktop ~25%, Mobile full when no note selected) */}
+        <div
+          className={`
+            bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col
+            ${isMobile ? (showEditor ? 'hidden' : 'w-full h-full') : 'w-96 flex-shrink-0 h-full'}
+          `}
+        >
+          {/* Search and Create */}
+          <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <SearchBar onSearch={handleSearch} />
+              </div>
+              <button
+                onClick={handleCreateNote}
+                disabled={isCreatingNote}
+                className="hidden lg:block p-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="New Note"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Note List */}
           <div className="flex-1 overflow-y-auto">
-            <div className="p-4 space-y-2">
-              {error && (
-                <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                  <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-                </div>
-              )}
-              <NoteList
-                notes={notes}
-                selectedNoteId={selectedNoteId}
-                onSelectNote={handleSelectNote}
-                onCreateNote={handleCreateNote}
-                isLoading={isLoading}
-              />
-            </div>
+            {error && (
+              <div className="m-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              </div>
+            )}
+            <NoteList
+              notes={notes}
+              selectedNoteId={selectedNoteId}
+              onSelectNote={handleSelectNote}
+              onCreateNote={handleCreateNote}
+              isLoading={isLoading}
+            />
           </div>
         </div>
 
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        {/* RIGHT COLUMN: Note Editor (Desktop ~60%, Mobile full when note selected) */}
+        <div
+          className={`
+            bg-white dark:bg-gray-900 flex flex-col overflow-hidden
+            ${isMobile ? (showEditor ? 'w-full h-full' : 'hidden') : 'flex-1 h-full'}
+          `}
+        >
           {showEditor && selectedNote ? (
             <NoteEditor
               note={selectedNote}
@@ -379,40 +449,24 @@ export default function DashboardPage() {
               updateNoteTags={updateNoteTags}
             />
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-8">
+            <div className="flex h-full items-center justify-center bg-white dark:bg-gray-900 p-8">
               <div className="text-center max-w-md">
-                <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg
-                    className="w-10 h-10 text-gray-400 dark:text-gray-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                </div>
-                <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  {notes.length === 0 ? 'Start writing' : 'Select a note'}
+                <svg
+                  className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                <h2 className="text-lg font-medium text-gray-500 dark:text-gray-400">
+                  {notes.length === 0 ? 'No notes yet' : 'Select a note to view'}
                 </h2>
-                <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mb-6">
-                  {notes.length === 0
-                    ? 'Create your first note to get started'
-                    : 'Choose a note from the list or create a new one'}
-                </p>
-                {notes.length === 0 && (
-                  <button
-                    onClick={handleCreateNote}
-                    disabled={isCreatingNote}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm md:text-base"
-                  >
-                    Create Note
-                  </button>
-                )}
               </div>
             </div>
           )}
