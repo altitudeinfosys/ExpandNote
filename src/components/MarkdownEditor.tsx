@@ -96,8 +96,9 @@ export function MarkdownEditor({
         }
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount - we handle value updates separately
+    // Only run once on mount - component remounts with new key when note changes
+    // The separate effect below handles value updates without destroying the editor
+  }, [placeholder, autoFocus]);
 
   // Update editor value when prop changes
   useEffect(() => {

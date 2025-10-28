@@ -22,6 +22,7 @@ export function TagFilter({ className = '' }: TagFilterProps) {
   } = useTags();
 
   const [showMore, setShowMore] = useState(false);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const handleDeleteTag = async (tagId: string, tagName: string) => {
     if (window.confirm(`Are you sure you want to delete the tag "#${tagName}"? This will remove it from all notes.`)) {
@@ -34,18 +35,13 @@ export function TagFilter({ className = '' }: TagFilterProps) {
     }
   };
 
-  // Sort tags (selected first, then alphabetically) - optimized with Set and memoization
+  // Sort tags alphabetically (no reordering on selection) - optimized with memoization
   const sortedTags = useMemo(() => {
-    const selectedSet = new Set(selectedTagIds); // O(1) lookups instead of O(n)
     return [...tags].sort((a, b) => {  // Spread to avoid mutating original array
-      const aSelected = selectedSet.has(a.id);
-      const bSelected = selectedSet.has(b.id);
-
-      if (aSelected && !bSelected) return -1;
-      if (!aSelected && bSelected) return 1;
-      return a.name.localeCompare(b.name);
+      const comparison = a.name.localeCompare(b.name);
+      return sortOrder === 'asc' ? comparison : -comparison;
     });
-  }, [tags, selectedTagIds]);
+  }, [tags, sortOrder]);
 
   const displayedTags = showMore
     ? sortedTags
@@ -56,9 +52,25 @@ export function TagFilter({ className = '' }: TagFilterProps) {
   return (
     <div className={className}>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-white">
-          TAGS
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+            TAGS
+          </h3>
+          <button
+            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+            className="p-1 hover:bg-gray-700 dark:hover:bg-gray-800 rounded transition-colors"
+            title={sortOrder === 'asc' ? 'Sort Z-A' : 'Sort A-Z'}
+            aria-label={sortOrder === 'asc' ? 'Sort descending' : 'Sort ascending'}
+          >
+            <svg className="w-3 h-3 text-gray-400 hover:text-white" fill="currentColor" viewBox="0 0 20 20">
+              {sortOrder === 'asc' ? (
+                <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 7a1 1 0 011-1h8a1 1 0 110 2H4a1 1 0 01-1-1zM3 11a1 1 0 011-1h4a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+              ) : (
+                <path fillRule="evenodd" d="M3 3a1 1 0 011-1h4a1 1 0 110 2H4a1 1 0 01-1-1zM3 7a1 1 0 011-1h8a1 1 0 110 2H4a1 1 0 01-1-1zM3 11a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+              )}
+            </svg>
+          </button>
+        </div>
         {selectedTagIds.length > 0 && (
           <button
             onClick={() => clearTagSelection()}
@@ -127,13 +139,20 @@ function TagFilterItem({ tag, isSelected, onToggle, onDelete }: TagFilterItemPro
         onClick={onToggle}
         className={`flex-1 flex items-center justify-between py-1.5 text-sm cursor-pointer transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500 rounded px-1 ${
           isSelected
-            ? 'text-white font-medium'
-            : 'text-gray-400 hover:text-gray-200'
+            ? 'text-white font-medium bg-blue-600/30 border-l-2 border-blue-500'
+            : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
         }`}
         aria-pressed={isSelected}
         aria-label={`Filter by ${tag.name}${isSelected ? ' - selected' : ''}`}
       >
-        <span className="truncate">{tag.name}</span>
+        <span className="flex items-center gap-2">
+          {isSelected && (
+            <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+            </svg>
+          )}
+          <span className="truncate">{tag.name}</span>
+        </span>
       </button>
 
       {/* Always show delete button on touch devices, show on hover for desktop */}

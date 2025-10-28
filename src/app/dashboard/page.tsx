@@ -33,9 +33,9 @@ export default function DashboardPage() {
 
   const {
     selectedTagIds,
-    fetchTags,
     getTagsForNote,
     updateNoteTags: updateNoteTagsOriginal,
+    clearTagSelection,
   } = useTags();
 
   // Wrap updateNoteTags to refetch notes after updating
@@ -69,13 +69,12 @@ export default function DashboardPage() {
     }
   }, [user, authLoading, router]);
 
-  // Fetch notes and tags on mount
+  // Fetch notes on mount (tags are fetched automatically by useTags hook)
   useEffect(() => {
     if (user && !authLoading) {
       fetchNotes();
-      fetchTags();
     }
-  }, [user, authLoading, fetchNotes, fetchTags]);
+  }, [user, authLoading, fetchNotes]);
 
   // Show editor when a note is selected
   useEffect(() => {
@@ -89,6 +88,10 @@ export default function DashboardPage() {
 
   const handleCreateNote = useCallback(async () => {
     setIsCreatingNote(true);
+    // Close sidebar on mobile when creating a new note
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
     try {
       const newNote = await createNote({
         title: null,
@@ -103,7 +106,7 @@ export default function DashboardPage() {
     } finally {
       setIsCreatingNote(false);
     }
-  }, [createNote]);
+  }, [createNote, isMobile]);
 
   const handleSelectNote = useCallback(
     (noteId: string) => {
@@ -120,9 +123,9 @@ export default function DashboardPage() {
   const handleCloseEditor = useCallback(() => {
     setSelectedNoteId(null);
     setShowEditor(false);
-    // Open sidebar on mobile when editor is closed (going back to list)
+    // Keep sidebar closed on mobile when returning to list
     if (isMobile) {
-      setSidebarOpen(true);
+      setSidebarOpen(false);
     }
   }, [isMobile]);
 
@@ -166,23 +169,47 @@ export default function DashboardPage() {
     [searchNotes, selectedTagIds]
   );
 
+  const handleShowAllNotes = useCallback(() => {
+    // Clear tag selection - effect will fetch all notes when selection is empty
+    clearTagSelection();
+  }, [clearTagSelection]);
+
   // Refilter notes when selected tags change
   // Use a ref to track previous tag IDs and prevent infinite loop
-  const prevSelectedTagIds = useRef<string[]>([]);
+  const prevSelectedTagIds = useRef<Set<string>>(new Set());
+  const isInitialMount = useRef(true);
+
   useEffect(() => {
-    // Only trigger search if tags actually changed (not just reference)
+    // Skip on initial mount - fetchNotes() is called separately
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      prevSelectedTagIds.current = new Set(selectedTagIds);
+      return;
+    }
+
+    // Use Set-based comparison to detect actual changes (order-independent)
+    const currentSet = new Set(selectedTagIds);
+    const prevSet = prevSelectedTagIds.current;
+
+    // Check if sets are different (size or contents)
     const tagsChanged =
-      prevSelectedTagIds.current.length !== selectedTagIds.length ||
-      prevSelectedTagIds.current.some((id, index) => id !== selectedTagIds[index]);
+      currentSet.size !== prevSet.size ||
+      Array.from(currentSet).some(id => !prevSet.has(id));
 
     if (tagsChanged) {
-      prevSelectedTagIds.current = selectedTagIds;
-      // When tag selection changes, reapply the filter with empty query
-      searchNotes('', {
-        tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined
-      });
+      // Store the current set for next comparison
+      prevSelectedTagIds.current = currentSet;
+
+      // When tag selection changes, reapply the filter
+      if (selectedTagIds.length > 0) {
+        // Filter by selected tags
+        searchNotes('', { tagIds: selectedTagIds });
+      } else {
+        // No tags selected - show all notes
+        fetchNotes();
+      }
     }
-  }, [selectedTagIds, searchNotes]);
+  }, [selectedTagIds, searchNotes, fetchNotes]);
 
   // Detect mobile viewport and handle window resize with throttling
   useEffect(() => {
@@ -338,7 +365,10 @@ export default function DashboardPage() {
         >
           {/* Navigation Items */}
           <nav className="py-4">
-            <button className="w-full px-4 py-2.5 flex items-center gap-3 text-white bg-gray-800 dark:bg-gray-900 border-l-4 border-blue-500">
+            <button
+              onClick={handleShowAllNotes}
+              className="w-full px-4 py-2.5 flex items-center gap-3 text-white bg-gray-800 dark:bg-gray-900 border-l-4 border-blue-500 hover:bg-gray-750 dark:hover:bg-gray-850 transition-colors"
+            >
               <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
                 <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd"/>
