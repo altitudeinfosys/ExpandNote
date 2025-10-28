@@ -33,7 +33,6 @@ export default function DashboardPage() {
 
   const {
     selectedTagIds,
-    fetchTags,
     getTagsForNote,
     updateNoteTags: updateNoteTagsOriginal,
     clearTagSelection,
@@ -70,13 +69,12 @@ export default function DashboardPage() {
     }
   }, [user, authLoading, router]);
 
-  // Fetch notes and tags on mount
+  // Fetch notes on mount (tags are fetched automatically by useTags hook)
   useEffect(() => {
     if (user && !authLoading) {
       fetchNotes();
-      fetchTags();
     }
-  }, [user, authLoading, fetchNotes, fetchTags]);
+  }, [user, authLoading, fetchNotes]);
 
   // Show editor when a note is selected
   useEffect(() => {
@@ -170,32 +168,35 @@ export default function DashboardPage() {
   );
 
   const handleShowAllNotes = useCallback(() => {
-    // Clear tag selection and fetch all notes
+    // Clear tag selection - this will trigger the effect to fetch all notes
     clearTagSelection();
-    fetchNotes();
-  }, [clearTagSelection, fetchNotes]);
+  }, [clearTagSelection]);
 
   // Refilter notes when selected tags change
   // Use a ref to track previous tag IDs and prevent infinite loop
-  const prevSelectedTagIds = useRef<string[]>([]);
+  const prevSelectedTagIds = useRef<Set<string>>(new Set());
   const isInitialMount = useRef(true);
 
   useEffect(() => {
     // Skip on initial mount - fetchNotes() is called separately
     if (isInitialMount.current) {
       isInitialMount.current = false;
-      prevSelectedTagIds.current = [...selectedTagIds];
+      prevSelectedTagIds.current = new Set(selectedTagIds);
       return;
     }
 
-    // Only trigger search if tags actually changed (not just reference)
+    // Use Set-based comparison to detect actual changes (order-independent)
+    const currentSet = new Set(selectedTagIds);
+    const prevSet = prevSelectedTagIds.current;
+
+    // Check if sets are different (size or contents)
     const tagsChanged =
-      prevSelectedTagIds.current.length !== selectedTagIds.length ||
-      prevSelectedTagIds.current.some((id, index) => id !== selectedTagIds[index]);
+      currentSet.size !== prevSet.size ||
+      Array.from(currentSet).some(id => !prevSet.has(id));
 
     if (tagsChanged) {
-      // Store a copy of the array to avoid reference issues
-      prevSelectedTagIds.current = [...selectedTagIds];
+      // Store the current set for next comparison
+      prevSelectedTagIds.current = currentSet;
 
       // When tag selection changes, reapply the filter
       if (selectedTagIds.length > 0) {
