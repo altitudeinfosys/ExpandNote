@@ -36,6 +36,7 @@ export default function DashboardPage() {
     fetchTags,
     getTagsForNote,
     updateNoteTags: updateNoteTagsOriginal,
+    clearTagSelection,
   } = useTags();
 
   // Wrap updateNoteTags to refetch notes after updating
@@ -168,10 +169,25 @@ export default function DashboardPage() {
     [searchNotes, selectedTagIds]
   );
 
+  const handleShowAllNotes = useCallback(() => {
+    // Clear tag selection and fetch all notes
+    clearTagSelection();
+    fetchNotes();
+  }, [clearTagSelection, fetchNotes]);
+
   // Refilter notes when selected tags change
   // Use a ref to track previous tag IDs and prevent infinite loop
   const prevSelectedTagIds = useRef<string[]>([]);
+  const isInitialMount = useRef(true);
+
   useEffect(() => {
+    // Skip on initial mount - fetchNotes() is called separately
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      prevSelectedTagIds.current = [...selectedTagIds];
+      return;
+    }
+
     // Only trigger search if tags actually changed (not just reference)
     const tagsChanged =
       prevSelectedTagIds.current.length !== selectedTagIds.length ||
@@ -180,12 +196,17 @@ export default function DashboardPage() {
     if (tagsChanged) {
       // Store a copy of the array to avoid reference issues
       prevSelectedTagIds.current = [...selectedTagIds];
-      // When tag selection changes, reapply the filter with empty query
-      searchNotes('', {
-        tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined
-      });
+
+      // When tag selection changes, reapply the filter
+      if (selectedTagIds.length > 0) {
+        // Filter by selected tags
+        searchNotes('', { tagIds: selectedTagIds });
+      } else {
+        // No tags selected - show all notes
+        fetchNotes();
+      }
     }
-  }, [selectedTagIds, searchNotes]);
+  }, [selectedTagIds, searchNotes, fetchNotes]);
 
   // Detect mobile viewport and handle window resize with throttling
   useEffect(() => {
@@ -341,7 +362,10 @@ export default function DashboardPage() {
         >
           {/* Navigation Items */}
           <nav className="py-4">
-            <button className="w-full px-4 py-2.5 flex items-center gap-3 text-white bg-gray-800 dark:bg-gray-900 border-l-4 border-blue-500">
+            <button
+              onClick={handleShowAllNotes}
+              className="w-full px-4 py-2.5 flex items-center gap-3 text-white bg-gray-800 dark:bg-gray-900 border-l-4 border-blue-500 hover:bg-gray-750 dark:hover:bg-gray-850 transition-colors"
+            >
               <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
                 <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd"/>
