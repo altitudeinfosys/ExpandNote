@@ -96,8 +96,8 @@ export function MarkdownEditor({
         }
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount - we handle value updates separately
+    // Include value in dependencies so editor reinitializes with correct content when component remounts
+  }, [value, placeholder, autoFocus, onChange]);
 
   // Update editor value when prop changes
   useEffect(() => {
