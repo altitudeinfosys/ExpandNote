@@ -96,8 +96,9 @@ export function MarkdownEditor({
         }
       }
     };
-    // Include value in dependencies so editor reinitializes with correct content when component remounts
-  }, [value, placeholder, autoFocus, onChange]);
+    // Only run once on mount - component remounts with new key when note changes
+    // The separate effect below handles value updates without destroying the editor
+  }, [placeholder, autoFocus, onChange]);
 
   // Update editor value when prop changes
   useEffect(() => {

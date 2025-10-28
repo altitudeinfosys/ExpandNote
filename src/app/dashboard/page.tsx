@@ -168,9 +168,10 @@ export default function DashboardPage() {
   );
 
   const handleShowAllNotes = useCallback(() => {
-    // Clear tag selection - this will trigger the effect to fetch all notes
+    // Clear tag selection and explicitly fetch all notes
     clearTagSelection();
-  }, [clearTagSelection]);
+    fetchNotes();
+  }, [clearTagSelection, fetchNotes]);
 
   // Refilter notes when selected tags change
   // Use a ref to track previous tag IDs and prevent infinite loop
