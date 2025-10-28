@@ -89,6 +89,10 @@ export default function DashboardPage() {
 
   const handleCreateNote = useCallback(async () => {
     setIsCreatingNote(true);
+    // Close sidebar on mobile when creating a new note
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
     try {
       const newNote = await createNote({
         title: null,
@@ -103,7 +107,7 @@ export default function DashboardPage() {
     } finally {
       setIsCreatingNote(false);
     }
-  }, [createNote]);
+  }, [createNote, isMobile]);
 
   const handleSelectNote = useCallback(
     (noteId: string) => {
@@ -120,11 +124,9 @@ export default function DashboardPage() {
   const handleCloseEditor = useCallback(() => {
     setSelectedNoteId(null);
     setShowEditor(false);
-    // Open sidebar on mobile when editor is closed (going back to list)
-    if (isMobile) {
-      setSidebarOpen(true);
-    }
-  }, [isMobile]);
+    // Keep sidebar closed on mobile when returning to list
+    // User can open it with hamburger menu if needed
+  }, []);
 
   const handleSaveNote = useCallback(
     async (noteData: {
