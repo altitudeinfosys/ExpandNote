@@ -124,8 +124,10 @@ export default function DashboardPage() {
     setSelectedNoteId(null);
     setShowEditor(false);
     // Keep sidebar closed on mobile when returning to list
-    // User can open it with hamburger menu if needed
-  }, []);
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
+  }, [isMobile]);
 
   const handleSaveNote = useCallback(
     async (noteData: {
@@ -168,10 +170,9 @@ export default function DashboardPage() {
   );
 
   const handleShowAllNotes = useCallback(() => {
-    // Clear tag selection and explicitly fetch all notes
+    // Clear tag selection - effect will fetch all notes when selection is empty
     clearTagSelection();
-    fetchNotes();
-  }, [clearTagSelection, fetchNotes]);
+  }, [clearTagSelection]);
 
   // Refilter notes when selected tags change
   // Use a ref to track previous tag IDs and prevent infinite loop
