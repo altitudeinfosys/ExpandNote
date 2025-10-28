@@ -177,3 +177,4 @@ Full product requirements are documented in `ExpandNote.prd` including:
 - setup the app for local testing to start at port 3003
 - whenever you finish a request and is ready to be tested and reviewed on my end - please restart the local web server at port 3003
 - always npm run build after each request to ensure that there is no build error
+- please remember to always run the app on port 3003 - when running it locally

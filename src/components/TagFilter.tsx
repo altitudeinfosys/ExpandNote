@@ -139,13 +139,20 @@ function TagFilterItem({ tag, isSelected, onToggle, onDelete }: TagFilterItemPro
         onClick={onToggle}
         className={`flex-1 flex items-center justify-between py-1.5 text-sm cursor-pointer transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500 rounded px-1 ${
           isSelected
-            ? 'text-white font-medium'
-            : 'text-gray-400 hover:text-gray-200'
+            ? 'text-white font-medium bg-blue-600/30 border-l-2 border-blue-500'
+            : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
         }`}
         aria-pressed={isSelected}
         aria-label={`Filter by ${tag.name}${isSelected ? ' - selected' : ''}`}
       >
-        <span className="truncate">{tag.name}</span>
+        <span className="flex items-center gap-2">
+          {isSelected && (
+            <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+            </svg>
+          )}
+          <span className="truncate">{tag.name}</span>
+        </span>
       </button>
 
       {/* Always show delete button on touch devices, show on hover for desktop */}
