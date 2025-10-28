@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useNotesStore } from '@/stores/notesStore';
 
 export function useNotes() {
@@ -18,6 +18,9 @@ export function useNotes() {
     setError,
     clearNotes,
   } = useNotesStore();
+
+  // AbortController ref to cancel in-flight search requests
+  const searchAbortControllerRef = useRef<AbortController | null>(null);
 
   // Fetch all notes
   const fetchNotes = useCallback(async () => {
@@ -139,11 +142,21 @@ export function useNotes() {
   // Search notes with optional filters
   const searchNotes = useCallback(
     async (query: string, filters?: { tagIds?: string[] }) => {
+      // Cancel any in-flight search request
+      if (searchAbortControllerRef.current) {
+        searchAbortControllerRef.current.abort();
+      }
+
       // If no query and no tag filters, just fetch all notes
       if (!query.trim() && (!filters?.tagIds || filters.tagIds.length === 0)) {
+        searchAbortControllerRef.current = null;
         fetchNotes();
         return;
       }
+
+      // Create new AbortController for this request
+      const abortController = new AbortController();
+      searchAbortControllerRef.current = abortController;
 
       setLoading(true);
       setError(null);
@@ -162,20 +175,34 @@ export function useNotes() {
           filters.tagIds.forEach(id => params.append('tagId', id));
         }
 
-        const response = await fetch(`/api/notes/search?${params.toString()}`);
+        const response = await fetch(`/api/notes/search?${params.toString()}`, {
+          signal: abortController.signal,
+        });
         const result = await response.json();
 
         if (!response.ok) {
           throw new Error(result.error || 'Failed to search notes');
         }
 
-        setNotes(result.data);
+        // Only update state if this request wasn't aborted
+        if (!abortController.signal.aborted) {
+          setNotes(result.data);
+        }
       } catch (err) {
+        // Ignore abort errors - they're expected when a new search starts
+        if (err instanceof Error && err.name === 'AbortError') {
+          return;
+        }
+
         const message = err instanceof Error ? err.message : 'Failed to search notes';
         setError(message);
         console.error('Error searching notes:', err);
       } finally {
-        setLoading(false);
+        // Only clear loading if this request wasn't aborted
+        if (!abortController.signal.aborted) {
+          setLoading(false);
+          searchAbortControllerRef.current = null;
+        }
       }
     },
     [fetchNotes, setNotes, setLoading, setError]

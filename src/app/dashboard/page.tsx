@@ -178,7 +178,8 @@ export default function DashboardPage() {
       prevSelectedTagIds.current.some((id, index) => id !== selectedTagIds[index]);
 
     if (tagsChanged) {
-      prevSelectedTagIds.current = selectedTagIds;
+      // Store a copy of the array to avoid reference issues
+      prevSelectedTagIds.current = [...selectedTagIds];
       // When tag selection changes, reapply the filter with empty query
       searchNotes('', {
         tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined
