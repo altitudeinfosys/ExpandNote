@@ -15,6 +15,14 @@ const MOBILE_BREAKPOINT = 1024; // Matches Tailwind's 'lg' breakpoint for three-
 const RESIZE_THROTTLE_MS = 150; // Throttle resize events to prevent excessive re-renders
 const MOBILE_HEADER_HEIGHT = 57; // Height of mobile header in pixels
 
+// View types and constants
+type DashboardView = 'all-notes' | 'trash';
+
+const DASHBOARD_VIEWS = {
+  ALL_NOTES: 'all-notes' as const,
+  TRASH: 'trash' as const,
+};
+
 export default function DashboardPage() {
   const { user, loading: authLoading, signOut } = useAuth();
   const router = useRouter();
@@ -51,7 +59,7 @@ export default function DashboardPage() {
 
   const [showEditor, setShowEditor] = useState(false);
   const [isCreatingNote, setIsCreatingNote] = useState(false);
-  const [currentView, setCurrentView] = useState<'all-notes' | 'trash'>('all-notes');
+  const [currentView, setCurrentView] = useState<DashboardView>(DASHBOARD_VIEWS.ALL_NOTES);
   // Initialize sidebar state based on viewport to prevent hydration mismatch
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     if (typeof window === 'undefined') return true; // SSR default
@@ -73,7 +81,7 @@ export default function DashboardPage() {
   // Fetch notes on mount and when view changes (tags are fetched automatically by useTags hook)
   useEffect(() => {
     if (user && !authLoading) {
-      fetchNotes({ showTrash: currentView === 'trash' });
+      fetchNotes({ showTrash: currentView === DASHBOARD_VIEWS.TRASH });
     }
   }, [user, authLoading, fetchNotes, currentView]);
 
@@ -154,30 +162,35 @@ export default function DashboardPage() {
         alert('Failed to delete note. Please try again.');
       } finally {
         // Always refetch notes to ensure UI is in sync with backend
-        await fetchNotes();
+        // Preserve the current view context (trash or all notes)
+        await fetchNotes({ showTrash: currentView === DASHBOARD_VIEWS.TRASH });
       }
     },
-    [deleteNoteById, fetchNotes, handleCloseEditor]
+    [deleteNoteById, fetchNotes, handleCloseEditor, currentView]
   );
 
   const handleSearch = useCallback(
     (query: string) => {
+      // Don't allow search in trash view
+      if (currentView === DASHBOARD_VIEWS.TRASH) {
+        return;
+      }
       // If tag filtering is active, use both query and tags
       searchNotes(query, {
         tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined
       });
     },
-    [searchNotes, selectedTagIds]
+    [searchNotes, selectedTagIds, currentView]
   );
 
   const handleShowAllNotes = useCallback(() => {
-    setCurrentView('all-notes');
+    setCurrentView(DASHBOARD_VIEWS.ALL_NOTES);
     // Clear tag selection - effect will fetch all notes when selection is empty
     clearTagSelection();
   }, [clearTagSelection]);
 
   const handleShowTrash = useCallback(() => {
-    setCurrentView('trash');
+    setCurrentView(DASHBOARD_VIEWS.TRASH);
     // Clear tag selection when viewing trash
     clearTagSelection();
   }, [clearTagSelection]);
@@ -196,7 +209,7 @@ export default function DashboardPage() {
     }
 
     // Don't apply tag filters when viewing trash
-    if (currentView === 'trash') {
+    if (currentView === DASHBOARD_VIEWS.TRASH) {
       return;
     }
 
@@ -327,7 +340,7 @@ export default function DashboardPage() {
             </svg>
           </button>
           <h1 className="text-lg font-semibold text-white">
-            {currentView === 'all-notes' ? 'All Notes' : 'Trash'}
+            {currentView === DASHBOARD_VIEWS.ALL_NOTES ? 'All Notes' : 'Trash'}
           </h1>
           <button
             onClick={handleCreateNote}
@@ -381,12 +394,14 @@ export default function DashboardPage() {
             <button
               onClick={handleShowAllNotes}
               className={`w-full px-4 py-2.5 flex items-center gap-3 transition-colors ${
-                currentView === 'all-notes'
+                currentView === DASHBOARD_VIEWS.ALL_NOTES
                   ? 'text-white bg-gray-800 dark:bg-gray-900 border-l-4 border-blue-500'
                   : 'text-gray-400 hover:text-white hover:bg-gray-800 dark:hover:bg-gray-900 border-l-4 border-transparent'
               }`}
+              aria-label="View all active notes"
+              aria-pressed={currentView === DASHBOARD_VIEWS.ALL_NOTES}
             >
-              <svg className={`w-5 h-5 ${currentView === 'all-notes' ? 'text-blue-400' : ''}`} fill="currentColor" viewBox="0 0 20 20">
+              <svg className={`w-5 h-5 ${currentView === DASHBOARD_VIEWS.ALL_NOTES ? 'text-blue-400' : ''}`} fill="currentColor" viewBox="0 0 20 20">
                 <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
                 <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd"/>
               </svg>
@@ -395,12 +410,14 @@ export default function DashboardPage() {
             <button
               onClick={handleShowTrash}
               className={`w-full px-4 py-2.5 flex items-center gap-3 transition-colors ${
-                currentView === 'trash'
+                currentView === DASHBOARD_VIEWS.TRASH
                   ? 'text-white bg-gray-800 dark:bg-gray-900 border-l-4 border-blue-500'
                   : 'text-gray-400 hover:text-white hover:bg-gray-800 dark:hover:bg-gray-900 border-l-4 border-transparent'
               }`}
+              aria-label="View deleted notes in trash"
+              aria-pressed={currentView === DASHBOARD_VIEWS.TRASH}
             >
-              <svg className={`w-5 h-5 ${currentView === 'trash' ? 'text-blue-400' : ''}`} fill="currentColor" viewBox="0 0 20 20">
+              <svg className={`w-5 h-5 ${currentView === DASHBOARD_VIEWS.TRASH ? 'text-blue-400' : ''}`} fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd"/>
               </svg>
               <span className="font-medium">Trash</span>
@@ -443,9 +460,16 @@ export default function DashboardPage() {
           {/* Search and Create */}
           <div className="p-3 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-2">
-              <div className="flex-1">
-                <SearchBar onSearch={handleSearch} />
-              </div>
+              {currentView !== DASHBOARD_VIEWS.TRASH && (
+                <div className="flex-1">
+                  <SearchBar onSearch={handleSearch} />
+                </div>
+              )}
+              {currentView === DASHBOARD_VIEWS.TRASH && (
+                <div className="flex-1 text-sm text-gray-500 dark:text-gray-400 px-3 py-2">
+                  Search is not available in trash
+                </div>
+              )}
               <button
                 onClick={handleCreateNote}
                 disabled={isCreatingNote}
