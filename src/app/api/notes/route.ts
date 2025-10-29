@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
 
     const sortOrder = searchParams.get('sortOrder') === 'asc' ? 'asc' : 'desc';
     const showFavorites = searchParams.get('favorites') === 'true';
+    const showTrash = searchParams.get('trash') === 'true';
 
     // Pagination
     const limit = Math.min(
@@ -55,8 +56,16 @@ export async function GET(request: NextRequest) {
       `,
         { count: 'exact' } // Get total count for pagination
       )
-      .eq('user_id', user.id)
-      .is('deleted_at', null);
+      .eq('user_id', user.id);
+
+    // Filter by trash status
+    if (showTrash) {
+      // Show only deleted notes
+      query = query.not('deleted_at', 'is', null);
+    } else {
+      // Show only non-deleted notes
+      query = query.is('deleted_at', null);
+    }
 
     // Apply filters
     if (showFavorites) {
