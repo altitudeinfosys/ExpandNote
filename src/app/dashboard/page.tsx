@@ -366,26 +366,18 @@ export default function DashboardPage() {
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-row overflow-hidden relative">
-        {/* Backdrop Overlay - Mobile Only */}
-        {sidebarOpen && isMobile && (
-          <div
-            className="fixed inset-0 bg-black/70 z-20 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-            aria-hidden="true"
-          />
-        )}
-
-        {/* LEFT COLUMN: Navigation & Tags (Desktop ~15%, Mobile drawer) */}
+      <div className="flex-1 flex flex-row overflow-hidden">
+        {/* LEFT COLUMN: Navigation & Tags (Desktop always visible, Mobile slides in) */}
         <div
           className={`
-            bg-gray-900 dark:bg-black border-r border-gray-700 dark:border-gray-800 flex flex-col
+            bg-gray-900 dark:bg-black border-r border-gray-700 dark:border-gray-800 flex flex-col flex-shrink-0
+            transition-all duration-300 ease-in-out
             ${isMobile
-              ? `fixed left-0 bottom-0 z-30 w-64 transform will-change-transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
-              : 'w-64 flex-shrink-0 h-full'
+              ? `${sidebarOpen ? 'w-64' : 'w-0'} overflow-hidden`
+              : 'w-64'
             }
           `}
-          style={isMobile ? { top: `${MOBILE_HEADER_HEIGHT}px` } : undefined}
+          style={isMobile ? { height: `calc(100vh - ${MOBILE_HEADER_HEIGHT}px)` } : undefined}
           role={isMobile ? "dialog" : undefined}
           aria-modal={isMobile && sidebarOpen ? "true" : undefined}
         >
@@ -454,7 +446,8 @@ export default function DashboardPage() {
         <div
           className={`
             bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col
-            ${isMobile ? (showEditor ? 'hidden' : 'w-full h-full') : 'w-96 flex-shrink-0 h-full'}
+            transition-all duration-300 ease-in-out
+            ${isMobile ? (showEditor ? 'hidden' : 'flex-1 h-full') : 'w-96 flex-shrink-0 h-full'}
           `}
         >
           {/* Search and Create */}
