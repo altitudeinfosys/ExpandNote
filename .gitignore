@@ -47,3 +47,6 @@ nohup.out
 .next-server-pid
 dev-3003.log
 *.log
+
+# git worktrees
+.worktrees/
