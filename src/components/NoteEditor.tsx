@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { Note, Tag } from '@/types';
 import { MarkdownEditor } from './MarkdownEditor';
 import { TagSelector } from './TagSelector';
+import { AIProfileButton } from './AIProfileButton';
+import { useAIProfiles } from '@/hooks/useAIProfiles';
 import { formatDateTime } from '@/lib/utils/date';
 import { AUTO_SAVE_DELAY_MS } from '@/lib/constants';
 interface NoteEditorProps {
@@ -30,6 +32,14 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
   );
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [selectedTags, setSelectedTags] = useState<Tag[]>(note?.tags || []);
+
+  // Fetch AI profiles
+  const { profiles } = useAIProfiles();
+
+  // Find profiles that match note's tags
+  const matchingProfiles = profiles.filter((profile) =>
+    selectedTags.some((tag) => tag.id === profile.tag_id)
+  );
 
   // Reset state when note changes
   useEffect(() => {
@@ -268,6 +278,28 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
           autoFocus={!note}
         />
       </div>
+
+      {/* AI Profile Actions */}
+      {note && matchingProfiles.length > 0 && (
+        <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-3 bg-gray-50 dark:bg-gray-800/50">
+          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+            AI Actions
+          </h3>
+          <div className="flex flex-col gap-2">
+            {matchingProfiles.map((profile) => (
+              <AIProfileButton
+                key={profile.id}
+                profile={profile}
+                noteId={note.id}
+                onSuccess={() => {
+                  // Reload note to see AI response
+                  handleSave();
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Tags Selector - Bottom like Simplenote */}
       {note && (
