@@ -16,6 +16,17 @@ type RouteParams = {
   }>;
 };
 
+function getEncryptionKey(): string {
+  const key = process.env.API_KEY_ENCRYPTION_KEY;
+  if (!key) {
+    throw new Error('API_KEY_ENCRYPTION_KEY environment variable is not configured.');
+  }
+  if (key.length < 32) {
+    throw new Error('API_KEY_ENCRYPTION_KEY must be at least 32 characters long.');
+  }
+  return key;
+}
+
 export async function POST(
   request: NextRequest,
   { params }: RouteParams
@@ -113,8 +124,12 @@ export async function POST(
     }
 
     // Task 9: Decrypt API Key
+    const encryptionKey = getEncryptionKey();
     const { data: decryptedKeyResult, error: decryptError } = await supabase
-      .rpc('decrypt_api_key', { encrypted_key: encryptedApiKey });
+      .rpc('decrypt_api_key', {
+        encrypted_value: encryptedApiKey,
+        encryption_key: encryptionKey
+      });
 
     if (decryptError || !decryptedKeyResult) {
       console.error('Decryption error:', decryptError);
