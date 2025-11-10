@@ -180,8 +180,7 @@ export async function POST(
       );
     }
 
-    // Record execution start
-    const executionStartTime = new Date().toISOString();
+    // Execute AI request
     let aiResponse: string;
     let tokensUsed = 0;
 
@@ -291,11 +290,13 @@ export async function POST(
 
       // Log successful execution
       await supabase.from('ai_executions').insert({
+        user_id: user.id,
         profile_id: profileId,
         note_id: noteId,
+        ai_provider: provider,
+        model: profile.model,
         status: 'success',
         tokens_used: tokensUsed,
-        executed_at: executionStartTime,
       });
 
       return NextResponse.json({
@@ -317,11 +318,13 @@ export async function POST(
       }
 
       await supabase.from('ai_executions').insert({
+        user_id: user.id,
         profile_id: profileId,
         note_id: noteId,
+        ai_provider: provider,
+        model: profile.model,
         status: 'failed',
         error_message: errorMessage,
-        executed_at: executionStartTime,
       });
 
       console.error('AI execution failed:', error);

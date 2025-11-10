@@ -36,8 +36,8 @@ export async function GET(request: NextRequest) {
           title
         )
       `)
-      .eq('ai_profiles.user_id', user.id)
-      .order('executed_at', { ascending: false })
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
       .limit(limit);
 
     if (error) {

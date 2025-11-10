@@ -11,7 +11,7 @@ type AIExecution = {
   status: 'success' | 'failed';
   tokens_used: number | null;
   error_message: string | null;
-  executed_at: string;
+  created_at: string;
   ai_profiles: {
     id: string;
     name: string;
@@ -126,7 +126,7 @@ export default function AILogsPage() {
                   {executions.map((execution) => (
                     <tr key={execution.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                        {new Date(execution.executed_at).toLocaleString()}
+                        {new Date(execution.created_at).toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                         {execution.ai_profiles?.name || 'Unknown'}
