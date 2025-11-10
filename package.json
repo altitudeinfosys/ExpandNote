@@ -13,10 +13,12 @@
     "supabase:gen-types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > src/types/supabase.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.68.0",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.75.1",
     "@types/simplemde": "^1.11.11",
     "next": "15.5.6",
+    "openai": "^6.8.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hot-toast": "^2.6.0",
@@ -25,6 +27,7 @@
     "rehype-highlight": "^7.0.2",
     "remark-gfm": "^4.0.1",
     "simplemde": "^1.11.2",
+    "tiktoken": "^1.0.22",
     "zustand": "^5.0.8"
   },
   "devDependencies": {

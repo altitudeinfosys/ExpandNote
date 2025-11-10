@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Note, Tag } from '@/types';
+import { Note, Tag, AIProfile } from '@/types';
 import { MarkdownEditor } from './MarkdownEditor';
 import { TagSelector } from './TagSelector';
 import { formatDateTime } from '@/lib/utils/date';
 import { AUTO_SAVE_DELAY_MS } from '@/lib/constants';
+import toast from 'react-hot-toast';
 interface NoteEditorProps {
   note: Note | null;
   onSave: (noteData: {
@@ -30,6 +31,8 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
   );
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [selectedTags, setSelectedTags] = useState<Tag[]>(note?.tags || []);
+  const [aiProfiles, setAiProfiles] = useState<AIProfile[]>([]);
+  const [executingProfileId, setExecutingProfileId] = useState<string | null>(null);
 
   // Reset state when note changes
   useEffect(() => {
@@ -156,6 +159,91 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
     }
   }, [note, updateNoteTags]);
 
+  // Fetch AI profiles that match the note's tags
+  useEffect(() => {
+    if (!note || selectedTags.length === 0) {
+      setAiProfiles([]);
+      return;
+    }
+
+    const fetchMatchingProfiles = async () => {
+      try {
+        const response = await fetch('/api/ai-profiles');
+        if (!response.ok) {
+          throw new Error('Failed to fetch AI profiles');
+        }
+
+        const allProfiles: AIProfile[] = await response.json();
+
+        // Filter profiles that match any of the note's tags
+        const tagIds = selectedTags.map(tag => tag.id);
+        const matchingProfiles = allProfiles.filter(
+          profile => profile.is_active && tagIds.includes(profile.tag_id)
+        );
+
+        setAiProfiles(matchingProfiles);
+      } catch (error) {
+        console.error('Failed to fetch AI profiles:', error);
+        setAiProfiles([]);
+      }
+    };
+
+    fetchMatchingProfiles();
+  }, [note, selectedTags]);
+
+  // Execute an AI profile
+  const handleExecuteProfile = useCallback(async (profileId: string) => {
+    if (!note || executingProfileId) return;
+
+    setExecutingProfileId(profileId);
+    const profile = aiProfiles.find(p => p.id === profileId);
+    const profileName = profile?.name || 'AI Profile';
+
+    try {
+      const response = await fetch(`/api/ai-profiles/${profileId}/execute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          noteId: note.id,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to execute AI profile');
+      }
+
+      const result = await response.json();
+
+      // Show success message
+      toast.success(`${profileName} executed successfully`);
+
+      // Handle different output behaviors
+      if (result.outputBehavior === 'new_note') {
+        // Optionally navigate to the new note
+        toast.success('New note created!', {
+          duration: 4000,
+        });
+      } else if (result.outputBehavior === 'append' || result.outputBehavior === 'replace') {
+        // Refresh the note to show updated content
+        toast.success('Note updated!', {
+          duration: 3000,
+        });
+        // Force a refresh by triggering onClose and reopening
+        // The parent component should handle this
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Failed to execute AI profile:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(`Failed to execute ${profileName}: ${errorMessage}`);
+    } finally {
+      setExecutingProfileId(null);
+    }
+  }, [note, aiProfiles, executingProfileId]);
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -268,6 +356,78 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
           autoFocus={!note}
         />
       </div>
+
+      {/* AI Profiles Section */}
+      {note && aiProfiles.length > 0 && (
+        <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-3 bg-gray-50 dark:bg-gray-800/50">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              />
+            </svg>
+            <span className="font-medium">AI Actions</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {aiProfiles.map(profile => (
+              <button
+                key={profile.id}
+                onClick={() => handleExecuteProfile(profile.id)}
+                disabled={executingProfileId !== null}
+                className={`
+                  flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
+                  transition-colors
+                  ${
+                    executingProfileId === profile.id
+                      ? 'bg-blue-600 text-white cursor-wait'
+                      : executingProfileId
+                      ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-500 hover:bg-blue-600 text-white cursor-pointer'
+                  }
+                `}
+              >
+                {executingProfileId === profile.id ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Running...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <span>{profile.name}</span>
+                  </>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Tags Selector - Bottom like Simplenote */}
       {note && (
