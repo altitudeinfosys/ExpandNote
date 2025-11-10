@@ -1,9 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-
-// Import SimpleMDE CSS
-import 'simplemde/dist/simplemde.min.css';
+import { useRef, useEffect } from 'react';
 
 interface MarkdownEditorProps {
   value: string;
@@ -21,93 +18,12 @@ export function MarkdownEditor({
   disabled = false,
 }: MarkdownEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const editorInstanceRef = useRef<any>(null);
-  const [isMounted, setIsMounted] = useState(false);
 
-  // Initialize SimpleMDE on client side only
   useEffect(() => {
-    setIsMounted(true);
-
-    // Wait for next tick to ensure DOM is ready
-    const initTimer = setTimeout(async () => {
-      if (textareaRef.current && !editorInstanceRef.current) {
-        try {
-          // Dynamically import SimpleMDE only on client
-          const SimpleMDE = (await import('simplemde')).default;
-
-          const instance = new SimpleMDE({
-            element: textareaRef.current,
-            spellChecker: false,
-            placeholder,
-            autofocus: autoFocus,
-            status: false,
-            initialValue: value,
-            toolbar: [
-              'bold',
-              'italic',
-              'heading',
-              '|',
-              'quote',
-              'unordered-list',
-              'ordered-list',
-              '|',
-              'link',
-              'image',
-              '|',
-              'preview',
-              'side-by-side',
-              'fullscreen',
-            ],
-            shortcuts: {
-              toggleBold: 'Cmd-B',
-              toggleItalic: 'Cmd-I',
-              toggleHeadingSmaller: 'Cmd-H',
-              toggleCodeBlock: 'Cmd-Alt-C',
-              togglePreview: 'Cmd-P',
-              toggleSideBySide: 'F9',
-              toggleFullScreen: 'F11',
-            },
-          });
-
-          // Listen for changes
-          instance.codemirror.on('change', () => {
-            onChange(instance.value());
-          });
-
-          editorInstanceRef.current = instance;
-        } catch (error) {
-          console.error('Failed to initialize SimpleMDE:', error);
-        }
-      }
-    }, 100);
-
-    return () => {
-      clearTimeout(initTimer);
-
-      // Cleanup SimpleMDE instance
-      if (editorInstanceRef.current) {
-        try {
-          editorInstanceRef.current.toTextArea();
-        } catch {
-          // Silently handle cleanup errors
-        } finally {
-          editorInstanceRef.current = null;
-        }
-      }
-    };
-    // Only run once on mount - component remounts with new key when note changes
-    // The separate effect below handles value updates without destroying the editor
-  }, [placeholder, autoFocus]);
-
-  // Update editor value when prop changes
-  useEffect(() => {
-    if (editorInstanceRef.current && editorInstanceRef.current.value() !== value) {
-      const cursorPos = editorInstanceRef.current.codemirror.getCursor();
-      editorInstanceRef.current.value(value);
-      editorInstanceRef.current.codemirror.setCursor(cursorPos);
+    if (autoFocus && textareaRef.current) {
+      textareaRef.current.focus();
     }
-  }, [value]);
+  }, [autoFocus]);
 
   if (disabled) {
     return (
@@ -118,18 +34,13 @@ export function MarkdownEditor({
   }
 
   return (
-    <div className="markdown-editor">
-      <textarea
-        ref={textareaRef}
-        defaultValue={value}
-        style={{ display: isMounted ? 'none' : 'block' }}
-        className="w-full min-h-[400px] p-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg"
-      />
-      {!isMounted && (
-        <div className="w-full min-h-[400px] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-4">
-          <div className="animate-pulse">Loading editor...</div>
-        </div>
-      )}
-    </div>
+    <textarea
+      ref={textareaRef}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="w-full min-h-[400px] p-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
+      disabled={disabled}
+    />
   );
 }

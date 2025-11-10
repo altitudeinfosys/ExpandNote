@@ -4,7 +4,9 @@ import { executeOpenAI } from '@/lib/ai/openai';
 import { executeAnthropic } from '@/lib/ai/anthropic';
 import { substitutePromptVariables } from '@/lib/ai/prompt-template';
 import { decryptApiKey } from '@/lib/encryption';
-import { AIProviderError } from '@/lib/ai/types';
+import { AIProviderError, MODEL_TOKEN_LIMITS } from '@/lib/ai/types';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { sanitizeAIOutput } from '@/lib/sanitize';
 import type { AIProvider, OutputBehavior } from '@/types';
 
 interface ExecuteRequestBody {
@@ -27,6 +29,14 @@ export async function POST(
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check rate limit (10 requests per minute per user)
+    if (!checkRateLimit(user.id, 10, 60000)) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please try again later.' },
+        { status: 429 }
+      );
     }
 
     // Parse request body
@@ -58,6 +68,21 @@ export async function POST(
     // Check if profile is active
     if (!profile.is_active) {
       return NextResponse.json({ error: 'AI profile is not active' }, { status: 400 });
+    }
+
+    // Validate profile configuration
+    if (!profile.ai_provider || !profile.model) {
+      return NextResponse.json(
+        { error: 'AI profile is missing provider or model configuration' },
+        { status: 400 }
+      );
+    }
+
+    if (!profile.system_prompt && !profile.user_prompt_template) {
+      return NextResponse.json(
+        { error: 'AI profile must have at least a system prompt or user prompt template' },
+        { status: 400 }
+      );
     }
 
     // Fetch note with tags
@@ -116,13 +141,9 @@ export async function POST(
     }
 
     // Decrypt API key using encryption library
-    console.log('Encrypted API key length:', encryptedApiKey?.length);
     const apiKey = await decryptApiKey(encryptedApiKey);
-    console.log('Decrypted API key exists:', !!apiKey);
-    console.log('Decrypted API key starts with:', apiKey?.substring(0, 7));
 
     if (!apiKey) {
-      console.error('Failed to decrypt API key');
       return NextResponse.json(
         { error: 'Failed to decrypt API key. It may be corrupted or invalid.' },
         { status: 500 }
@@ -145,6 +166,19 @@ export async function POST(
       profile.user_prompt_template || '',
       promptVariables
     );
+
+    // Validate content size (estimate tokens: ~4 chars per token)
+    const estimatedTokens = Math.ceil((systemPrompt.length + userPrompt.length) / 4);
+    const modelLimit = MODEL_TOKEN_LIMITS[profile.model as keyof typeof MODEL_TOKEN_LIMITS];
+
+    if (modelLimit && estimatedTokens > modelLimit * 0.7) {
+      return NextResponse.json(
+        {
+          error: `Content too large for ${profile.model}. Estimated ${estimatedTokens} tokens, limit is ${Math.floor(modelLimit * 0.7)} tokens (70% of ${modelLimit} to reserve space for output).`,
+        },
+        { status: 400 }
+      );
+    }
 
     // Record execution start
     const executionStartTime = new Date().toISOString();
@@ -178,13 +212,16 @@ export async function POST(
         );
       }
 
+      // Sanitize AI response to prevent XSS attacks
+      const sanitizedResponse = sanitizeAIOutput(aiResponse);
+
       // Handle output behavior
       const outputBehavior = profile.output_behavior as OutputBehavior;
       let resultNoteId = noteId;
 
       if (outputBehavior === 'append') {
         // Append AI response to existing note
-        const newContent = note.content + '\n\n' + aiResponse;
+        const newContent = note.content + '\n\n' + sanitizedResponse;
         const { error: updateError } = await supabase
           .from('notes')
           .update({
@@ -202,7 +239,7 @@ export async function POST(
         const { error: updateError } = await supabase
           .from('notes')
           .update({
-            content: aiResponse,
+            content: sanitizedResponse,
             updated_at: new Date().toISOString(),
           })
           .eq('id', noteId)
@@ -222,7 +259,7 @@ export async function POST(
           .insert({
             user_id: user.id,
             title: newNoteTitle,
-            content: aiResponse,
+            content: sanitizedResponse,
           })
           .select()
           .single();

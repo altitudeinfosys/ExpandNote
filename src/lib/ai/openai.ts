@@ -23,8 +23,6 @@ export async function executeOpenAI(
       });
     }
 
-    console.log('OpenAI: Initializing client with API key:', request.apiKey.substring(0, 10) + '...');
-
     // Initialize OpenAI client with user's API key
     const client = new OpenAI({
       apiKey: request.apiKey,
