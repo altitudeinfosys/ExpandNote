@@ -368,12 +368,20 @@ function SettingsContent() {
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-white">AI Profiles</h2>
-                    <button
-                      onClick={() => router.push('/settings/ai-profiles/new')}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
-                      Create New Profile
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => router.push('/settings/ai-logs')}
+                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                      >
+                        View Execution Logs
+                      </button>
+                      <button
+                        onClick={() => router.push('/settings/ai-profiles/new')}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      >
+                        Create New Profile
+                      </button>
+                    </div>
                   </div>
 
                   {profiles.length === 0 ? (

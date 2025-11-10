@@ -187,13 +187,21 @@ export default function DashboardPage() {
     setCurrentView(DASHBOARD_VIEWS.ALL_NOTES);
     // Clear tag selection - effect will fetch all notes when selection is empty
     clearTagSelection();
-  }, [clearTagSelection]);
+    // Refresh notes when switching to All Notes view
+    fetchNotes({ showTrash: false });
+  }, [clearTagSelection, fetchNotes]);
 
   const handleShowTrash = useCallback(() => {
     setCurrentView(DASHBOARD_VIEWS.TRASH);
     // Clear tag selection when viewing trash
     clearTagSelection();
-  }, [clearTagSelection]);
+    // Refresh notes when switching to Trash view
+    fetchNotes({ showTrash: true });
+  }, [clearTagSelection, fetchNotes]);
+
+  const handleRefresh = useCallback(() => {
+    fetchNotes({ showTrash: currentView === DASHBOARD_VIEWS.TRASH });
+  }, [fetchNotes, currentView]);
 
   // Refilter notes when selected tags change
   // Use a ref to track previous tag IDs and prevent infinite loop
@@ -342,26 +350,47 @@ export default function DashboardPage() {
           <h1 className="text-lg font-semibold text-white">
             {currentView === DASHBOARD_VIEWS.ALL_NOTES ? 'All Notes' : 'Trash'}
           </h1>
-          <button
-            onClick={handleCreateNote}
-            disabled={isCreatingNote}
-            className="p-2 hover:bg-gray-800 dark:hover:bg-gray-900 rounded transition-colors"
-            aria-label="New note"
-          >
-            <svg
-              className="w-6 h-6 text-blue-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleRefresh}
+              className="p-2 hover:bg-gray-800 dark:hover:bg-gray-900 rounded transition-colors"
+              aria-label="Refresh notes"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-          </button>
+              <svg
+                className="w-6 h-6 text-gray-300"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+            </button>
+            <button
+              onClick={handleCreateNote}
+              disabled={isCreatingNote}
+              className="p-2 hover:bg-gray-800 dark:hover:bg-gray-900 rounded transition-colors"
+              aria-label="New note"
+            >
+              <svg
+                className="w-6 h-6 text-blue-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -463,6 +492,25 @@ export default function DashboardPage() {
                   Search is not available in trash
                 </div>
               )}
+              <button
+                onClick={handleRefresh}
+                className="hidden lg:block p-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                title="Refresh Notes"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+              </button>
               <button
                 onClick={handleCreateNote}
                 disabled={isCreatingNote}

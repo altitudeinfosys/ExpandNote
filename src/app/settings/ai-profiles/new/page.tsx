@@ -69,8 +69,9 @@ export default function NewAIProfilePage() {
     try {
       const response = await fetch('/api/tags');
       if (response.ok) {
-        const data = await response.json();
-        setTags(Array.isArray(data) ? data : []);
+        const json = await response.json();
+        const tagsData = json.data || json; // Handle both { data: [...] } and direct array
+        setTags(Array.isArray(tagsData) ? tagsData : []);
       } else {
         setTags([]);
       }
