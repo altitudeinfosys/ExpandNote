@@ -22,19 +22,19 @@ interface NoteEditorProps {
 
 export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, updateNoteTags }: NoteEditorProps) {
 
-  const [title, setTitle] = useState(note?.title || '');
-  const [content, setContent] = useState(note?.content || '');
-  const [isFavorite, setIsFavorite] = useState(note?.is_favorite || false);
+  // Initialize with empty values - useEffect will set from note prop
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [isFavorite, setIsFavorite] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(
-    note ? new Date(note.updated_at) : null
-  );
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [selectedTags, setSelectedTags] = useState<Tag[]>(note?.tags || []);
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [aiProfiles, setAiProfiles] = useState<AIProfile[]>([]);
   const [executingProfileId, setExecutingProfileId] = useState<string | null>(null);
+  const [executedProfileIds, setExecutedProfileIds] = useState<Set<string>>(new Set());
 
-  // Reset state when note changes
+  // Reset state when note ID changes (not just when note object reference changes)
   useEffect(() => {
     let isMounted = true;
 
@@ -77,7 +77,7 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
     return () => {
       isMounted = false;
     };
-  }, [note, getTagsForNote]);
+  }, [note?.id, getTagsForNote]); // Only re-run when note ID changes, not note object
 
   // Track changes
   useEffect(() => {
@@ -190,6 +190,32 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
 
     fetchMatchingProfiles();
   }, [note, selectedTags]);
+
+  // Auto-execute automatic profiles when tags change (but only once per profile per note session)
+  // NOTE: Disabled for now - automatic execution can be enabled by uncommenting this code
+  // useEffect(() => {
+  //   if (!note || aiProfiles.length === 0 || executingProfileId) return;
+
+  //   const automaticProfiles = aiProfiles.filter(
+  //     profile => profile.trigger_mode === 'automatic' && !executedProfileIds.has(profile.id)
+  //   );
+
+  //   if (automaticProfiles.length > 0) {
+  //     const executeAutomatic = async () => {
+  //       for (const profile of automaticProfiles) {
+  //         try {
+  //           await handleExecuteProfile(profile.id);
+  //           // Mark as executed
+  //           setExecutedProfileIds(prev => new Set(prev).add(profile.id));
+  //         } catch (error) {
+  //           console.error(`Auto-execution failed for profile ${profile.name}:`, error);
+  //         }
+  //       }
+  //     };
+
+  //     executeAutomatic();
+  //   }
+  // }, [aiProfiles, note, executingProfileId, executedProfileIds]);
 
   // Execute an AI profile
   const handleExecuteProfile = useCallback(async (profileId: string) => {
@@ -348,12 +374,13 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
 
       {/* Editor */}
       <div className="flex-1 overflow-auto px-4 py-3 bg-white dark:bg-gray-900">
-        <MarkdownEditor
+        {/* Temporary simple textarea to test if SimpleMDE is the issue */}
+        <textarea
           key={note?.id || 'new-note'}
           value={content}
-          onChange={setContent}
+          onChange={(e) => setContent(e.target.value)}
           placeholder="Start typing your note..."
-          autoFocus={!note}
+          className="w-full h-full min-h-[500px] p-4 font-mono text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
         />
       </div>
 

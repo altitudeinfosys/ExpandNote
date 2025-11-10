@@ -3,7 +3,6 @@
  */
 
 import OpenAI from 'openai';
-import { encoding_for_model, TiktokenModel } from 'tiktoken';
 import { AIExecutionRequest, AIExecutionResponse, AIProviderError } from './types';
 
 /**
@@ -16,6 +15,16 @@ export async function executeOpenAI(
   request: AIExecutionRequest
 ): Promise<AIExecutionResponse> {
   try {
+    // Validate API key format
+    if (!request.apiKey || request.apiKey.trim() === '') {
+      throw new AIProviderError('OpenAI API key is empty or invalid', {
+        provider: 'openai',
+        code: 'INVALID_API_KEY',
+      });
+    }
+
+    console.log('OpenAI: Initializing client with API key:', request.apiKey.substring(0, 10) + '...');
+
     // Initialize OpenAI client with user's API key
     const client = new OpenAI({
       apiKey: request.apiKey,
@@ -96,26 +105,9 @@ export async function executeOpenAI(
  * @returns Approximate token count
  */
 export function estimateTokens(text: string, model: string): number {
-  try {
-    // Map model names to tiktoken models
-    let tiktokenModel: TiktokenModel;
-    if (model.startsWith('gpt-4')) {
-      tiktokenModel = 'gpt-4';
-    } else if (model.startsWith('gpt-3.5')) {
-      tiktokenModel = 'gpt-3.5-turbo';
-    } else {
-      // Default to gpt-3.5-turbo for unknown models
-      tiktokenModel = 'gpt-3.5-turbo';
-    }
-
-    const encoder = encoding_for_model(tiktokenModel);
-    const tokens = encoder.encode(text);
-    encoder.free(); // Clean up
-    return tokens.length;
-  } catch (error) {
-    // Fallback: rough estimation (1 token ≈ 4 characters)
-    return Math.ceil(text.length / 4);
-  }
+  // Simple estimation: 1 token ≈ 4 characters for English text
+  // This is a rough approximation but avoids tiktoken dependency issues in serverless
+  return Math.ceil(text.length / 4);
 }
 
 /**

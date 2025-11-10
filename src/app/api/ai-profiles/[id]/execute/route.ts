@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { executeOpenAI } from '@/lib/ai/openai';
 import { executeAnthropic } from '@/lib/ai/anthropic';
 import { substitutePromptVariables } from '@/lib/ai/prompt-template';
+import { decryptApiKey } from '@/lib/encryption';
 import { AIProviderError } from '@/lib/ai/types';
 import type { AIProvider, OutputBehavior } from '@/types';
 
@@ -114,21 +115,19 @@ export async function POST(
       );
     }
 
-    // Decrypt API key using database function
-    const { data: decryptedData, error: decryptError } = await supabase.rpc(
-      'decrypt_api_key',
-      { encrypted_key: encryptedApiKey }
-    );
+    // Decrypt API key using encryption library
+    console.log('Encrypted API key length:', encryptedApiKey?.length);
+    const apiKey = await decryptApiKey(encryptedApiKey);
+    console.log('Decrypted API key exists:', !!apiKey);
+    console.log('Decrypted API key starts with:', apiKey?.substring(0, 7));
 
-    if (decryptError || !decryptedData) {
-      console.error('Error decrypting API key:', decryptError);
+    if (!apiKey) {
+      console.error('Failed to decrypt API key');
       return NextResponse.json(
-        { error: 'Failed to decrypt API key' },
+        { error: 'Failed to decrypt API key. It may be corrupted or invalid.' },
         { status: 500 }
       );
     }
-
-    const apiKey = decryptedData;
 
     // Prepare prompt variables
     const promptVariables = {
