@@ -347,9 +347,16 @@ export default function DashboardPage() {
               />
             </svg>
           </button>
-          <h1 className="text-lg font-semibold text-white">
-            {currentView === DASHBOARD_VIEWS.ALL_NOTES ? 'All Notes' : 'Trash'}
-          </h1>
+          <div className="flex items-center gap-2">
+            <img
+              src="/logo-icon-dark.svg"
+              alt="ExpandNote"
+              className="w-6 h-6"
+            />
+            <h1 className="text-lg font-semibold text-white">
+              {currentView === DASHBOARD_VIEWS.ALL_NOTES ? 'All Notes' : 'Trash'}
+            </h1>
+          </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handleRefresh}
@@ -410,6 +417,18 @@ export default function DashboardPage() {
           role={isMobile ? "dialog" : undefined}
           aria-modal={isMobile && sidebarOpen ? "true" : undefined}
         >
+          {/* Logo */}
+          <div className="px-4 py-6 border-b border-gray-700 dark:border-gray-800">
+            <div className="flex items-center gap-3">
+              <img
+                src="/logo-icon-dark.svg"
+                alt="ExpandNote"
+                className="w-8 h-8"
+              />
+              <span className="text-xl font-semibold text-white">ExpandNote</span>
+            </div>
+          </div>
+
           {/* Navigation Items */}
           <nav className="py-4">
             <button

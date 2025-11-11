@@ -69,6 +69,18 @@ function LoginForm() {
       <div className="w-full max-w-md px-4">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8">
           <div className="text-center mb-8">
+            <div className="flex justify-center mb-4">
+              <img
+                src="/logo-icon.svg"
+                alt="ExpandNote"
+                className="w-16 h-16 dark:hidden"
+              />
+              <img
+                src="/logo-icon-dark.svg"
+                alt="ExpandNote"
+                className="w-16 h-16 hidden dark:block"
+              />
+            </div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
               Welcome Back
             </h1>

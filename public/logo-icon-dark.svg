@@ -1,0 +1,27 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Paper base -->
+  <path d="M128 96C128 78.3269 142.327 64 160 64H352C369.673 64 384 78.3269 384 96V416C384 433.673 369.673 448 352 448H160C142.327 448 128 433.673 128 416V96Z" stroke="#60A5FA" stroke-width="12" stroke-linejoin="round"/>
+
+  <!-- Folded corner -->
+  <path d="M352 64V96C352 104.837 359.163 112 368 112H384" stroke="#60A5FA" stroke-width="12" stroke-linejoin="round"/>
+  <path d="M352 64L384 96" stroke="#60A5FA" stroke-width="12" stroke-linejoin="round"/>
+
+  <!-- Circuit traces - horizontal lines -->
+  <line x1="176" y1="160" x2="280" y2="160" stroke="#93C5FD" stroke-width="4" stroke-linecap="round"/>
+  <line x1="176" y1="224" x2="336" y2="224" stroke="#93C5FD" stroke-width="4" stroke-linecap="round"/>
+  <line x1="224" y1="288" x2="336" y2="288" stroke="#93C5FD" stroke-width="4" stroke-linecap="round"/>
+  <line x1="176" y1="352" x2="280" y2="352" stroke="#93C5FD" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Circuit traces - vertical connectors -->
+  <line x1="224" y1="160" x2="224" y2="288" stroke="#93C5FD" stroke-width="4" stroke-linecap="round"/>
+  <line x1="280" y1="160" x2="280" y2="352" stroke="#93C5FD" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Circuit nodes -->
+  <circle cx="224" cy="160" r="6" fill="#93C5FD"/>
+  <circle cx="280" cy="160" r="6" fill="#93C5FD"/>
+  <circle cx="224" cy="224" r="6" fill="#93C5FD"/>
+  <circle cx="280" cy="224" r="6" fill="#93C5FD"/>
+  <circle cx="224" cy="288" r="6" fill="#93C5FD"/>
+  <circle cx="280" cy="288" r="6" fill="#93C5FD"/>
+  <circle cx="280" cy="352" r="6" fill="#93C5FD"/>
+</svg>
