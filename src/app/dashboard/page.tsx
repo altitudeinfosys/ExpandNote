@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotes } from '@/hooks/useNotes';
 import { useTags } from '@/hooks/useTags';
@@ -348,10 +349,19 @@ export default function DashboardPage() {
             </svg>
           </button>
           <div className="flex items-center gap-2">
-            <img
+            <Image
+              src="/logo-icon.svg"
+              alt="ExpandNote"
+              width={24}
+              height={24}
+              className="w-6 h-6 dark:hidden"
+            />
+            <Image
               src="/logo-icon-dark.svg"
               alt="ExpandNote"
-              className="w-6 h-6"
+              width={24}
+              height={24}
+              className="w-6 h-6 hidden dark:block"
             />
             <h1 className="text-lg font-semibold text-white">
               {currentView === DASHBOARD_VIEWS.ALL_NOTES ? 'All Notes' : 'Trash'}
@@ -420,10 +430,19 @@ export default function DashboardPage() {
           {/* Logo */}
           <div className="px-4 py-6 border-b border-gray-700 dark:border-gray-800">
             <div className="flex items-center gap-3">
-              <img
+              <Image
+                src="/logo-icon.svg"
+                alt="ExpandNote"
+                width={32}
+                height={32}
+                className="w-8 h-8 dark:hidden"
+              />
+              <Image
                 src="/logo-icon-dark.svg"
                 alt="ExpandNote"
-                className="w-8 h-8"
+                width={32}
+                height={32}
+                className="w-8 h-8 hidden dark:block"
               />
               <span className="text-xl font-semibold text-white">ExpandNote</span>
             </div>

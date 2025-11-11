@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { isValidEmail } from '@/lib/validation';
@@ -70,14 +71,18 @@ function LoginForm() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8">
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
-              <img
+              <Image
                 src="/logo-icon.svg"
                 alt="ExpandNote"
+                width={64}
+                height={64}
                 className="w-16 h-16 dark:hidden"
               />
-              <img
+              <Image
                 src="/logo-icon-dark.svg"
                 alt="ExpandNote"
+                width={64}
+                height={64}
                 className="w-16 h-16 hidden dark:block"
               />
             </div>

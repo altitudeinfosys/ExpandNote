@@ -19,7 +19,11 @@ export const metadata: Metadata = {
   description: "AI-powered note-taking app with voice input, smart tagging, and automated content processing. Replace Simplenote with enhanced AI capabilities.",
   icons: {
     icon: [
-      { url: '/logo-icon.svg', type: 'image/svg+xml' },
+      { url: '/logo-icon.svg', type: 'image/svg+xml', media: '(prefers-color-scheme: light)' },
+      { url: '/logo-icon-dark.svg', type: 'image/svg+xml', media: '(prefers-color-scheme: dark)' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
     ],
   },
 };
