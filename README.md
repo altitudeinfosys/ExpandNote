@@ -1,6 +1,7 @@
-# ExpandNote
-
-AI-powered note-taking application designed to replace Simplenote with enhanced AI capabilities.
+<div align="center">
+  <img src="public/logo.svg" alt="ExpandNote Logo" width="600">
+  <p><strong>AI-powered note-taking application designed to replace Simplenote with enhanced AI capabilities.</strong></p>
+</div>
 
 ## Features
 
