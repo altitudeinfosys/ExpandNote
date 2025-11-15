@@ -184,8 +184,8 @@ export default function EditAIProfilePage() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-gray-600 dark:text-gray-300">Loading...</div>
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+        <div className="text-[var(--foreground-secondary)]">Loading...</div>
       </div>
     );
   }
@@ -200,28 +200,28 @@ export default function EditAIProfilePage() {
     OPENROUTER_MODELS;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-[var(--background)]">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <header className="bg-[var(--background-surface)] border-b border-[var(--border)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.push('/settings?section=ai-profiles')}
-              className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+              className="text-[var(--foreground-secondary)] hover:text-[var(--foreground)]"
             >
               ← Back to Settings
             </button>
-            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Edit AI Profile</h1>
+            <h1 className="text-2xl font-semibold text-[var(--foreground)]">Edit AI Profile</h1>
           </div>
         </div>
       </header>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <form onSubmit={handleSubmit} className="bg-[var(--background-surface)] rounded-lg shadow-sm border border-[var(--border)] p-6">
           <div className="space-y-6">
             {/* Profile Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
                 Profile Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -229,20 +229,20 @@ export default function EditAIProfilePage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g., YouTube Video Summarizer"
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--foreground)] placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
               />
             </div>
 
             {/* Tag Trigger */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
                 Tag Trigger <span className="text-red-500">*</span>
               </label>
               <select
                 value={tagId}
                 onChange={(e) => setTagId(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--foreground)] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
               >
                 <option value="">Select a tag...</option>
@@ -256,18 +256,18 @@ export default function EditAIProfilePage() {
                   ))
                 )}
               </select>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-sm text-[var(--foreground-secondary)]">
                 This profile will run when notes are tagged with this tag
               </p>
             </div>
 
             {/* AI Provider */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
                 AI Provider <span className="text-red-500">*</span>
               </label>
               <div className="flex gap-4">
-                <label className="flex items-center text-gray-900 dark:text-white">
+                <label className="flex items-center text-[var(--foreground)]">
                   <input
                     type="radio"
                     value="openai"
@@ -277,7 +277,7 @@ export default function EditAIProfilePage() {
                   />
                   <span>OpenAI</span>
                 </label>
-                <label className="flex items-center text-gray-900 dark:text-white">
+                <label className="flex items-center text-[var(--foreground)]">
                   <input
                     type="radio"
                     value="claude"
@@ -287,7 +287,7 @@ export default function EditAIProfilePage() {
                   />
                   <span>Claude</span>
                 </label>
-                <label className="flex items-center text-gray-900 dark:text-white">
+                <label className="flex items-center text-[var(--foreground)]">
                   <input
                     type="radio"
                     value="openrouter"
@@ -302,13 +302,13 @@ export default function EditAIProfilePage() {
 
             {/* Model */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
                 Model <span className="text-red-500">*</span>
               </label>
               <select
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--foreground)] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
               >
                 {availableModels.map((m) => (
@@ -321,7 +321,7 @@ export default function EditAIProfilePage() {
 
             {/* System Prompt */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
                 System Prompt <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -329,17 +329,17 @@ export default function EditAIProfilePage() {
                 onChange={(e) => setSystemPrompt(e.target.value)}
                 placeholder="You are a helpful assistant that..."
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--foreground)] placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
                 required
               />
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-sm text-[var(--foreground-secondary)]">
                 Context and instructions for the AI
               </p>
             </div>
 
             {/* User Prompt Template */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
                 User Prompt Template <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -347,21 +347,21 @@ export default function EditAIProfilePage() {
                 onChange={(e) => setUserPromptTemplate(e.target.value)}
                 placeholder="Analyze this content: {note_content}"
                 rows={6}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--foreground)] placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
                 required
               />
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-sm text-[var(--foreground-secondary)]">
                 Available variables: {'{note_title}'}, {'{note_content}'}, {'{tags}'}
               </p>
             </div>
 
             {/* Trigger Mode */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
                 Trigger Mode <span className="text-red-500">*</span>
               </label>
               <div className="flex gap-4">
-                <label className="flex items-center text-gray-900 dark:text-white">
+                <label className="flex items-center text-[var(--foreground)]">
                   <input
                     type="radio"
                     value="automatic"
@@ -371,7 +371,7 @@ export default function EditAIProfilePage() {
                   />
                   <span>Automatic (runs when tag is added)</span>
                 </label>
-                <label className="flex items-center text-gray-900 dark:text-white">
+                <label className="flex items-center text-[var(--foreground)]">
                   <input
                     type="radio"
                     value="manual"
@@ -386,11 +386,11 @@ export default function EditAIProfilePage() {
 
             {/* Output Behavior */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
                 Output Behavior <span className="text-red-500">*</span>
               </label>
               <div className="space-y-2">
-                <label className="flex items-center text-gray-900 dark:text-white">
+                <label className="flex items-center text-[var(--foreground)]">
                   <input
                     type="radio"
                     value="new_note"
@@ -400,7 +400,7 @@ export default function EditAIProfilePage() {
                   />
                   <span>Create new note</span>
                 </label>
-                <label className="flex items-center text-gray-900 dark:text-white">
+                <label className="flex items-center text-[var(--foreground)]">
                   <input
                     type="radio"
                     value="append"
@@ -410,7 +410,7 @@ export default function EditAIProfilePage() {
                   />
                   <span>Append to original note</span>
                 </label>
-                <label className="flex items-center text-gray-900 dark:text-white">
+                <label className="flex items-center text-[var(--foreground)]">
                   <input
                     type="radio"
                     value="replace"
@@ -426,7 +426,7 @@ export default function EditAIProfilePage() {
             {/* Output Title Template (only for new_note) */}
             {outputBehavior === 'new_note' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
                   New Note Title Template <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -434,34 +434,34 @@ export default function EditAIProfilePage() {
                   value={outputTitleTemplate}
                   onChange={(e) => setOutputTitleTemplate(e.target.value)}
                   placeholder="Summary: {note_title}"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--foreground)] placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                <p className="mt-1 text-sm text-[var(--foreground-secondary)]">
                   Template for the new note title. Use {'{note_title}'} for the original note title.
                 </p>
               </div>
             )}
 
             {/* Status */}
-            <div className="flex items-center text-gray-900 dark:text-white">
+            <div className="flex items-center text-[var(--foreground)]">
               <input
                 type="checkbox"
                 checked={isActive}
                 onChange={(e) => setIsActive(e.target.checked)}
                 className="mr-2 w-4 h-4"
               />
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="text-sm font-medium text-[var(--foreground)]">
                 Active (profile will run automatically)
               </label>
             </div>
 
             {/* Actions */}
-            <div className="flex gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex gap-4 pt-4 border-t border-[var(--border)]">
               <button
                 type="button"
                 onClick={() => router.push('/settings?section=ai-profiles')}
-                className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-[var(--foreground)] rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 Cancel
               </button>
