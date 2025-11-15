@@ -207,7 +207,7 @@ export default function EditAIProfilePage() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.push('/settings?section=ai-profiles')}
-              className="text-gray-600 hover:text-gray-900"
+              className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
             >
               ← Back to Settings
             </button>
@@ -229,7 +229,7 @@ export default function EditAIProfilePage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g., YouTube Video Summarizer"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
               />
             </div>
@@ -242,7 +242,7 @@ export default function EditAIProfilePage() {
               <select
                 value={tagId}
                 onChange={(e) => setTagId(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
               >
                 <option value="">Select a tag...</option>
@@ -308,7 +308,7 @@ export default function EditAIProfilePage() {
               <select
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
               >
                 {availableModels.map((m) => (
@@ -329,7 +329,7 @@ export default function EditAIProfilePage() {
                 onChange={(e) => setSystemPrompt(e.target.value)}
                 placeholder="You are a helpful assistant that..."
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
                 required
               />
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -347,7 +347,7 @@ export default function EditAIProfilePage() {
                 onChange={(e) => setUserPromptTemplate(e.target.value)}
                 placeholder="Analyze this content: {note_content}"
                 rows={6}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
                 required
               />
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -434,7 +434,7 @@ export default function EditAIProfilePage() {
                   value={outputTitleTemplate}
                   onChange={(e) => setOutputTitleTemplate(e.target.value)}
                   placeholder="Summary: {note_title}"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
