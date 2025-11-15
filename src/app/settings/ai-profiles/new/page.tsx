@@ -22,6 +22,21 @@ const CLAUDE_MODELS = [
   { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus' },
 ];
 
+const OPENROUTER_MODELS = [
+  { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet' },
+  { id: 'anthropic/claude-3.5-haiku', name: 'Claude 3.5 Haiku' },
+  { id: 'openai/gpt-4o', name: 'GPT-4o' },
+  { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini' },
+  { id: 'openai/gpt-4-turbo', name: 'GPT-4 Turbo' },
+  { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B Instruct' },
+  { id: 'meta-llama/llama-3.1-405b-instruct', name: 'Llama 3.1 405B Instruct' },
+  { id: 'google/gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash' },
+  { id: 'google/gemini-pro-1.5', name: 'Gemini 1.5 Pro' },
+  { id: 'mistralai/mistral-large', name: 'Mistral Large' },
+  { id: 'deepseek/deepseek-chat', name: 'DeepSeek Chat' },
+  { id: 'qwen/qwen-2.5-72b-instruct', name: 'Qwen 2.5 72B Instruct' },
+];
+
 export default function NewAIProfilePage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -33,7 +48,7 @@ export default function NewAIProfilePage() {
   // Form state
   const [name, setName] = useState('');
   const [tagId, setTagId] = useState('');
-  const [aiProvider, setAiProvider] = useState<'openai' | 'claude'>('openai');
+  const [aiProvider, setAiProvider] = useState<'openai' | 'claude' | 'openrouter'>('openai');
   const [model, setModel] = useState('gpt-4o');
   const [systemPrompt, setSystemPrompt] = useState('');
   const [userPromptTemplate, setUserPromptTemplate] = useState('');
@@ -60,8 +75,10 @@ export default function NewAIProfilePage() {
   useEffect(() => {
     if (aiProvider === 'openai') {
       setModel('gpt-4o');
-    } else {
+    } else if (aiProvider === 'claude') {
       setModel('claude-3-5-sonnet-20241022');
+    } else if (aiProvider === 'openrouter') {
+      setModel('anthropic/claude-3.5-sonnet');
     }
   }, [aiProvider]);
 
@@ -141,7 +158,10 @@ export default function NewAIProfilePage() {
     return null;
   }
 
-  const availableModels = aiProvider === 'openai' ? OPENAI_MODELS : CLAUDE_MODELS;
+  const availableModels =
+    aiProvider === 'openai' ? OPENAI_MODELS :
+    aiProvider === 'claude' ? CLAUDE_MODELS :
+    OPENROUTER_MODELS;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -233,6 +253,16 @@ export default function NewAIProfilePage() {
                     className="mr-2"
                   />
                   <span>Claude</span>
+                </label>
+                <label className="flex items-center text-gray-900 dark:text-white">
+                  <input
+                    type="radio"
+                    value="openrouter"
+                    checked={aiProvider === 'openrouter'}
+                    onChange={(e) => setAiProvider(e.target.value as 'openrouter')}
+                    className="mr-2"
+                  />
+                  <span>OpenRouter</span>
                 </label>
               </div>
             </div>
