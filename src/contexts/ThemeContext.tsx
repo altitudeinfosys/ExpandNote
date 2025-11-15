@@ -2,71 +2,60 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
-type Theme = 'light' | 'dark' | 'auto';
+type Theme = 'light' | 'dark';
 
 type ThemeContextType = {
   theme: Theme;
   setTheme: (theme: Theme) => void;
-  effectiveTheme: 'light' | 'dark';
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('auto');
-  const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>('dark');
+// Get initial theme from localStorage or default to dark
+function getInitialTheme(): Theme {
+  if (typeof window === 'undefined') return 'dark';
 
-  // Load theme from localStorage on mount
+  const savedTheme = localStorage.getItem('theme') as Theme;
+  if (savedTheme && ['light', 'dark'].includes(savedTheme)) {
+    return savedTheme;
+  }
+  return 'dark';
+}
+
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [theme, setThemeState] = useState<Theme>(getInitialTheme);
+  const [mounted, setMounted] = useState(false);
+
+  // Mark as mounted after first render
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as Theme;
-    if (savedTheme && ['light', 'dark', 'auto'].includes(savedTheme)) {
-      setThemeState(savedTheme);
-    }
+    setMounted(true);
   }, []);
 
-  // Update effective theme based on theme setting
-  useEffect(() => {
-    const updateEffectiveTheme = () => {
-      if (theme === 'auto') {
-        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        setEffectiveTheme(isDark ? 'dark' : 'light');
-      } else {
-        setEffectiveTheme(theme);
-      }
-    };
-
-    updateEffectiveTheme();
-
-    // Listen for system theme changes when in auto mode
-    if (theme === 'auto') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const handler = (e: MediaQueryListEvent) => {
-        setEffectiveTheme(e.matches ? 'dark' : 'light');
-      };
-      mediaQuery.addEventListener('change', handler);
-      return () => mediaQuery.removeEventListener('change', handler);
-    }
-  }, [theme]);
-
-  // Apply theme to document
+  // Apply theme to document immediately and on changes
   useEffect(() => {
     const root = document.documentElement;
-    if (effectiveTheme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-    console.log('Theme applied:', effectiveTheme, 'Classes:', root.classList.toString());
-  }, [effectiveTheme]);
+
+    // Remove both classes first
+    root.classList.remove('light', 'dark');
+
+    // Add the current theme class
+    root.classList.add(theme);
+
+    // Also update localStorage
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
   const setTheme = (newTheme: Theme) => {
-    console.log('Setting theme to:', newTheme);
     setThemeState(newTheme);
-    localStorage.setItem('theme', newTheme);
   };
 
+  // Prevent flash of wrong theme by not rendering until mounted
+  if (!mounted) {
+    return null;
+  }
+
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, effectiveTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );

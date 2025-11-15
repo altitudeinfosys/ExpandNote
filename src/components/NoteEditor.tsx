@@ -271,80 +271,42 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
   }, [note, aiProfiles, executingProfileId]);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full w-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-        <div className="flex items-center gap-3 flex-1">
+      <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-[var(--border)] bg-[var(--background-surface)]">
+        <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
           {/* Back Arrow on Mobile, X on Desktop */}
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-2.5 text-[var(--foreground)] hover:bg-[var(--background)] rounded-lg transition-colors flex-shrink-0"
             aria-label="Back to notes"
           >
             {/* Back Arrow - Mobile */}
-            <svg
-              className="w-6 h-6 text-gray-600 dark:text-gray-400 md:hidden"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
+            <span className="material-symbols-outlined text-2xl md:hidden">arrow_back</span>
             {/* X Icon - Desktop */}
-            <svg
-              className="w-5 h-5 text-gray-600 dark:text-gray-400 hidden md:block"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <span className="material-symbols-outlined text-xl hidden md:block">close</span>
           </button>
 
           <button
             onClick={toggleFavorite}
-            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background)] rounded-lg transition-colors flex-shrink-0"
             aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
           >
-            <svg
-              className={`w-5 h-5 ${
-                isFavorite
-                  ? 'text-yellow-500 fill-current'
-                  : 'text-gray-400 dark:text-gray-500'
-              }`}
-              fill={isFavorite ? 'currentColor' : 'none'}
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
-              />
-            </svg>
+            <span className={`material-symbols-outlined ${isFavorite ? 'text-yellow-500' : ''}`}>
+              {isFavorite ? 'star' : 'star_border'}
+            </span>
           </button>
 
-          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-2 text-xs md:text-sm text-[var(--foreground-secondary)] min-w-0">
             {isSaving && (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                <span>Saving...</span>
+                <div className="animate-spin rounded-full h-3 w-3 md:h-4 md:w-4 border-b-2 border-[var(--primary)] flex-shrink-0"></div>
+                <span className="hidden sm:inline">Saving...</span>
               </>
             )}
-            {!isSaving && hasUnsavedChanges && <span>Unsaved changes</span>}
+            {!isSaving && hasUnsavedChanges && <span className="hidden sm:inline">Unsaved changes</span>}
             {!isSaving && !hasUnsavedChanges && lastSaved && (
-              <span>Saved {formatDateTime(lastSaved)}</span>
+              <span className="truncate">{formatDateTime(lastSaved)}</span>
             )}
           </div>
         </div>
@@ -353,119 +315,92 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
           {note && onDelete && (
             <button
               onClick={handleDelete}
-              className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors font-medium"
+              className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors font-medium"
             >
-              Delete
+              <span className="material-symbols-outlined text-lg">delete</span>
+              <span className="hidden md:inline">Delete</span>
             </button>
           )}
         </div>
       </div>
 
       {/* Title Input */}
-      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+      <div className="flex-shrink-0 px-4 py-3 border-b border-[var(--border)] bg-[var(--background-surface)]">
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Note title (optional)"
-          className="w-full text-xl md:text-2xl font-bold bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+          className="w-full text-xl md:text-2xl font-bold bg-transparent border-none outline-none text-[var(--foreground)] placeholder-[var(--foreground-secondary)]"
         />
       </div>
 
-      {/* Editor */}
-      <div className="flex-1 overflow-auto px-4 py-3 bg-white dark:bg-gray-900">
-        {/* Temporary simple textarea to test if SimpleMDE is the issue */}
+      {/* Editor - Scrollable */}
+      <div className="flex-1 overflow-auto px-4 py-3 bg-[var(--background)]">
         <textarea
           key={note?.id || 'new-note'}
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="Start typing your note..."
-          className="w-full h-full min-h-[500px] p-4 font-mono text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+          className="w-full min-h-[300px] md:min-h-[400px] p-4 font-mono text-sm border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] bg-[var(--background-surface)] text-[var(--foreground)] resize-y"
         />
       </div>
 
-      {/* AI Profiles Section */}
-      {note && aiProfiles.length > 0 && (
-        <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-3 bg-gray-50 dark:bg-gray-800/50">
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 10V3L4 14h7v7l9-11h-7z"
-              />
-            </svg>
-            <span className="font-medium">AI Actions</span>
+      {/* Bottom Section - Fixed at bottom */}
+      <div className="flex-shrink-0">
+        {/* Tags Selector - Always visible */}
+        {note && (
+          <div className="border-t border-[var(--border)] px-4 py-3 bg-[var(--background-surface)]">
+            <TagSelector
+              selectedTags={selectedTags}
+              onTagsChange={handleTagsChange}
+              disabled={isSaving}
+            />
           </div>
-          <div className="flex flex-wrap gap-2">
-            {aiProfiles.map(profile => (
-              <button
-                key={profile.id}
-                onClick={() => handleExecuteProfile(profile.id)}
-                disabled={executingProfileId !== null}
-                className={`
-                  flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
-                  transition-colors
-                  ${
-                    executingProfileId === profile.id
-                      ? 'bg-blue-600 text-white cursor-wait'
-                      : executingProfileId
-                      ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-500 hover:bg-blue-600 text-white cursor-pointer'
-                  }
-                `}
-              >
-                {executingProfileId === profile.id ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Running...</span>
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <span>{profile.name}</span>
-                  </>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+        )}
 
-      {/* Tags Selector - Bottom like Simplenote */}
-      {note && (
-        <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-3 bg-white dark:bg-gray-800">
-          <TagSelector
-            selectedTags={selectedTags}
-            onTagsChange={handleTagsChange}
-            disabled={isSaving}
-          />
-        </div>
-      )}
+        {/* AI Profiles Section - Below tags */}
+        {note && aiProfiles.length > 0 && (
+          <div className="border-t border-[var(--border)] px-4 py-3 bg-[var(--background-surface)]">
+            <div className="flex items-center gap-2 text-sm text-[var(--foreground-secondary)] mb-2">
+              <span className="material-symbols-outlined text-base">bolt</span>
+              <span className="font-medium">AI Actions</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {aiProfiles.map(profile => (
+                <button
+                  key={profile.id}
+                  onClick={() => handleExecuteProfile(profile.id)}
+                  disabled={executingProfileId !== null}
+                  className={`
+                    flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
+                    transition-colors
+                    ${
+                      executingProfileId === profile.id
+                        ? 'bg-[var(--primary)] text-white cursor-wait'
+                        : executingProfileId
+                        ? 'bg-[var(--background)] text-[var(--foreground-secondary)] cursor-not-allowed'
+                        : 'bg-[var(--primary)] hover:opacity-90 text-white cursor-pointer'
+                    }
+                  `}
+                >
+                  {executingProfileId === profile.id ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Running...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-base">play_arrow</span>
+                      <span>{profile.name}</span>
+                    </>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
