@@ -23,18 +23,18 @@ const CLAUDE_MODELS = [
 ];
 
 const OPENROUTER_MODELS = [
-  { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet' },
-  { id: 'anthropic/claude-3.5-haiku', name: 'Claude 3.5 Haiku' },
-  { id: 'openai/gpt-4o', name: 'GPT-4o' },
-  { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini' },
-  { id: 'openai/gpt-4-turbo', name: 'GPT-4 Turbo' },
-  { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B Instruct' },
-  { id: 'meta-llama/llama-3.1-405b-instruct', name: 'Llama 3.1 405B Instruct' },
-  { id: 'google/gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash' },
-  { id: 'google/gemini-pro-1.5', name: 'Gemini 1.5 Pro' },
-  { id: 'mistralai/mistral-large', name: 'Mistral Large' },
-  { id: 'deepseek/deepseek-chat', name: 'DeepSeek Chat' },
-  { id: 'qwen/qwen-2.5-72b-instruct', name: 'Qwen 2.5 72B Instruct' },
+  { id: 'anthropic/claude-sonnet-4.5', name: 'Claude Sonnet 4.5' },
+  { id: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5' },
+  { id: 'openai/gpt-5.1', name: 'GPT-5.1' },
+  { id: 'openai/gpt-5.1-chat', name: 'GPT-5.1 Chat' },
+  { id: 'openai/gpt-5-pro', name: 'GPT-5 Pro' },
+  { id: 'google/gemini-2.5-flash-preview-09-2025', name: 'Gemini 2.5 Flash' },
+  { id: 'google/gemini-2.5-flash-lite-preview-09-2025', name: 'Gemini 2.5 Flash Lite' },
+  { id: 'nvidia/llama-3.3-nemotron-super-49b-v1.5', name: 'Llama 3.3 Nemotron 49B' },
+  { id: 'mistralai/voxtral-small-24b-2507', name: 'Voxtral Small 24B' },
+  { id: 'deepseek/deepseek-v3.2-exp', name: 'DeepSeek V3.2' },
+  { id: 'qwen/qwen3-max', name: 'Qwen3 Max' },
+  { id: 'qwen/qwen3-coder-plus', name: 'Qwen3 Coder Plus' },
 ];
 
 export default function NewAIProfilePage() {
@@ -78,7 +78,7 @@ export default function NewAIProfilePage() {
     } else if (aiProvider === 'claude') {
       setModel('claude-3-5-sonnet-20241022');
     } else if (aiProvider === 'openrouter') {
-      setModel('anthropic/claude-3.5-sonnet');
+      setModel('anthropic/claude-sonnet-4.5');
     }
   }, [aiProvider]);
 

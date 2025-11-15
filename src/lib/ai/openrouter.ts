@@ -28,38 +28,34 @@ function sanitizeText(text: string): string {
 /**
  * Available OpenRouter models with their display names
  * Used for model selection dropdowns in UI components
+ * Updated: 2025-01 with current OpenRouter model IDs
  */
 export const OPENROUTER_MODELS = [
   // Anthropic models via OpenRouter
-  { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet' },
-  { id: 'anthropic/claude-3.5-haiku', name: 'Claude 3.5 Haiku' },
-  { id: 'anthropic/claude-3-opus', name: 'Claude 3 Opus' },
-  { id: 'anthropic/claude-3-sonnet', name: 'Claude 3 Sonnet' },
-  { id: 'anthropic/claude-3-haiku', name: 'Claude 3 Haiku' },
+  { id: 'anthropic/claude-sonnet-4.5', name: 'Claude Sonnet 4.5' },
+  { id: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5' },
   // OpenAI models via OpenRouter
-  { id: 'openai/gpt-4o', name: 'GPT-4o' },
-  { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini' },
-  { id: 'openai/gpt-4-turbo', name: 'GPT-4 Turbo' },
-  { id: 'openai/gpt-4', name: 'GPT-4' },
-  { id: 'openai/gpt-3.5-turbo', name: 'GPT-3.5 Turbo' },
-  // Meta Llama models
-  { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B' },
-  { id: 'meta-llama/llama-3.1-405b-instruct', name: 'Llama 3.1 405B' },
-  { id: 'meta-llama/llama-3.1-70b-instruct', name: 'Llama 3.1 70B' },
-  { id: 'meta-llama/llama-3.1-8b-instruct', name: 'Llama 3.1 8B' },
+  { id: 'openai/gpt-5.1', name: 'GPT-5.1' },
+  { id: 'openai/gpt-5.1-chat', name: 'GPT-5.1 Chat' },
+  { id: 'openai/gpt-5-pro', name: 'GPT-5 Pro' },
+  { id: 'openai/o3-deep-research', name: 'o3 Deep Research' },
+  { id: 'openai/o4-mini-deep-research', name: 'o4 Mini Deep Research' },
   // Google Gemini models
-  { id: 'google/gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash' },
-  { id: 'google/gemini-pro-1.5', name: 'Gemini Pro 1.5' },
-  { id: 'google/gemini-flash-1.5', name: 'Gemini Flash 1.5' },
+  { id: 'google/gemini-2.5-flash-preview-09-2025', name: 'Gemini 2.5 Flash' },
+  { id: 'google/gemini-2.5-flash-lite-preview-09-2025', name: 'Gemini 2.5 Flash Lite' },
+  { id: 'google/gemini-2.5-flash-image', name: 'Gemini 2.5 Flash Image' },
+  // Meta Llama models
+  { id: 'nvidia/llama-3.3-nemotron-super-49b-v1.5', name: 'Llama 3.3 Nemotron 49B' },
   // Mistral models
-  { id: 'mistralai/mistral-large', name: 'Mistral Large' },
-  { id: 'mistralai/mistral-medium', name: 'Mistral Medium' },
-  { id: 'mistralai/mistral-small', name: 'Mistral Small' },
+  { id: 'mistralai/voxtral-small-24b-2507', name: 'Voxtral Small 24B' },
   // DeepSeek models
-  { id: 'deepseek/deepseek-chat', name: 'DeepSeek Chat' },
+  { id: 'deepseek/deepseek-v3.2-exp', name: 'DeepSeek V3.2' },
+  { id: 'deepseek/deepseek-v3.1-terminus', name: 'DeepSeek V3.1 Terminus' },
   // Qwen models
-  { id: 'qwen/qwen-2.5-72b-instruct', name: 'Qwen 2.5 72B' },
-  { id: 'qwen/qwen-2.5-32b-instruct', name: 'Qwen 2.5 32B' },
+  { id: 'qwen/qwen3-max', name: 'Qwen3 Max' },
+  { id: 'qwen/qwen3-coder-plus', name: 'Qwen3 Coder Plus' },
+  { id: 'qwen/qwen3-next-80b-a3b-instruct', name: 'Qwen3 Next 80B' },
+  { id: 'qwen/qwen-plus-2025-07-28', name: 'Qwen Plus' },
 ] as const;
 
 /**
@@ -88,11 +84,23 @@ export async function executeOpenRouter(
 
     // Check if API key is still valid after sanitization
     if (!sanitizedApiKey || sanitizedApiKey === '') {
-      throw new AIProviderError('OpenRouter API key contains invalid characters. Please check for smart quotes, ellipsis, or other special characters.', {
+      console.error('OpenRouter API key validation failed:', {
+        originalLength: request.apiKey.length,
+        sanitizedLength: sanitizedApiKey.length,
+        originalKey: request.apiKey.substring(0, 10) + '...',
+      });
+      throw new AIProviderError('OpenRouter API key is invalid or contains too many special characters. Please re-enter your API key from OpenRouter dashboard.', {
         provider: 'openrouter',
         code: 'INVALID_API_KEY',
       });
     }
+
+    // Log API key info for debugging (first 10 chars only)
+    console.log('OpenRouter API key validation:', {
+      originalLength: request.apiKey.length,
+      sanitizedLength: sanitizedApiKey.length,
+      prefix: sanitizedApiKey.substring(0, 10),
+    });
 
     // Initialize OpenAI client with OpenRouter configuration
     // OpenRouter uses an OpenAI-compatible API
@@ -201,36 +209,31 @@ export function isSupportedOpenRouterModel(model: string): boolean {
 export function getOpenRouterMaxTokens(model: string): number {
   // Model-specific max tokens based on known limits
   const maxTokensMap: Record<string, number> = {
-    // Anthropic models - all support up to 4096 output tokens
-    'anthropic/claude-3.5-sonnet': 4096,
-    'anthropic/claude-3.5-haiku': 4096,
-    'anthropic/claude-3-opus': 4096,
-    'anthropic/claude-3-sonnet': 4096,
-    'anthropic/claude-3-haiku': 4096,
+    // Anthropic models
+    'anthropic/claude-sonnet-4.5': 8192,
+    'anthropic/claude-haiku-4.5': 8192,
     // OpenAI models
-    'openai/gpt-4o': 4096,
-    'openai/gpt-4o-mini': 4096,
-    'openai/gpt-4-turbo': 4096,
-    'openai/gpt-4': 8192,
-    'openai/gpt-3.5-turbo': 4096,
-    // Meta Llama models
-    'meta-llama/llama-3.3-70b-instruct': 8192,
-    'meta-llama/llama-3.1-405b-instruct': 8192,
-    'meta-llama/llama-3.1-70b-instruct': 8192,
-    'meta-llama/llama-3.1-8b-instruct': 8192,
+    'openai/gpt-5.1': 16384,
+    'openai/gpt-5.1-chat': 16384,
+    'openai/gpt-5-pro': 16384,
+    'openai/o3-deep-research': 32768,
+    'openai/o4-mini-deep-research': 16384,
     // Google Gemini models
-    'google/gemini-2.0-flash-exp': 8192,
-    'google/gemini-pro-1.5': 8192,
-    'google/gemini-flash-1.5': 8192,
+    'google/gemini-2.5-flash-preview-09-2025': 8192,
+    'google/gemini-2.5-flash-lite-preview-09-2025': 8192,
+    'google/gemini-2.5-flash-image': 8192,
+    // Meta Llama models
+    'nvidia/llama-3.3-nemotron-super-49b-v1.5': 8192,
     // Mistral models
-    'mistralai/mistral-large': 8192,
-    'mistralai/mistral-medium': 8192,
-    'mistralai/mistral-small': 8192,
+    'mistralai/voxtral-small-24b-2507': 8192,
     // DeepSeek models
-    'deepseek/deepseek-chat': 4096,
+    'deepseek/deepseek-v3.2-exp': 8192,
+    'deepseek/deepseek-v3.1-terminus': 8192,
     // Qwen models
-    'qwen/qwen-2.5-72b-instruct': 8192,
-    'qwen/qwen-2.5-32b-instruct': 8192,
+    'qwen/qwen3-max': 8192,
+    'qwen/qwen3-coder-plus': 8192,
+    'qwen/qwen3-next-80b-a3b-instruct': 8192,
+    'qwen/qwen-plus-2025-07-28': 8192,
   };
 
   // Return specific limit if known, otherwise default to 4000
@@ -243,31 +246,7 @@ export function getOpenRouterMaxTokens(model: string): number {
  * @returns Human-readable model name
  */
 export function getOpenRouterModelDisplayName(model: string): string {
-  const displayNames: Record<string, string> = {
-    'anthropic/claude-3.5-sonnet': 'Claude 3.5 Sonnet',
-    'anthropic/claude-3.5-haiku': 'Claude 3.5 Haiku',
-    'anthropic/claude-3-opus': 'Claude 3 Opus',
-    'anthropic/claude-3-sonnet': 'Claude 3 Sonnet',
-    'anthropic/claude-3-haiku': 'Claude 3 Haiku',
-    'openai/gpt-4o': 'GPT-4o',
-    'openai/gpt-4o-mini': 'GPT-4o Mini',
-    'openai/gpt-4-turbo': 'GPT-4 Turbo',
-    'openai/gpt-4': 'GPT-4',
-    'openai/gpt-3.5-turbo': 'GPT-3.5 Turbo',
-    'meta-llama/llama-3.3-70b-instruct': 'Llama 3.3 70B',
-    'meta-llama/llama-3.1-405b-instruct': 'Llama 3.1 405B',
-    'meta-llama/llama-3.1-70b-instruct': 'Llama 3.1 70B',
-    'meta-llama/llama-3.1-8b-instruct': 'Llama 3.1 8B',
-    'google/gemini-2.0-flash-exp': 'Gemini 2.0 Flash',
-    'google/gemini-pro-1.5': 'Gemini Pro 1.5',
-    'google/gemini-flash-1.5': 'Gemini Flash 1.5',
-    'mistralai/mistral-large': 'Mistral Large',
-    'mistralai/mistral-medium': 'Mistral Medium',
-    'mistralai/mistral-small': 'Mistral Small',
-    'deepseek/deepseek-chat': 'DeepSeek Chat',
-    'qwen/qwen-2.5-72b-instruct': 'Qwen 2.5 72B',
-    'qwen/qwen-2.5-32b-instruct': 'Qwen 2.5 32B',
-  };
-
-  return displayNames[model] || model;
+  // Use the OPENROUTER_MODELS constant for display names
+  const found = OPENROUTER_MODELS.find(m => m.id === model);
+  return found ? found.name : model;
 }
