@@ -7,6 +7,25 @@ import OpenAI from 'openai';
 import { AIExecutionRequest, AIExecutionResponse, AIProviderError } from './types';
 
 /**
+ * Sanitize text to ensure it only contains valid ASCII characters
+ * Replaces common problematic characters with their ASCII equivalents
+ * @param text - The text to sanitize
+ * @returns Sanitized text safe for API transmission
+ */
+function sanitizeText(text: string): string {
+  return text
+    // Replace smart quotes with regular quotes
+    .replace(/[\u201C\u201D]/g, '"')  // " and "
+    .replace(/[\u2018\u2019]/g, "'")  // ' and '
+    // Replace ellipsis with three periods
+    .replace(/\u2026/g, '...')  // …
+    // Replace em dash and en dash with regular dash
+    .replace(/[\u2013\u2014]/g, '-')  // – and —
+    // Remove any remaining non-ASCII characters
+    .replace(/[^\x00-\x7F]/g, '');
+}
+
+/**
  * Available OpenRouter models with their display names
  * Used for model selection dropdowns in UI components
  */
@@ -62,8 +81,13 @@ export async function executeOpenRouter(
       });
     }
 
-    // Check for non-ASCII characters in API key
-    if (!/^[\x00-\x7F]*$/.test(request.apiKey)) {
+    // Sanitize API key and prompts to remove non-ASCII characters
+    const sanitizedApiKey = sanitizeText(request.apiKey.trim());
+    const sanitizedSystemPrompt = sanitizeText(request.systemPrompt);
+    const sanitizedUserPrompt = sanitizeText(request.userPrompt);
+
+    // Check if API key is still valid after sanitization
+    if (!sanitizedApiKey || sanitizedApiKey === '') {
       throw new AIProviderError('OpenRouter API key contains invalid characters. Please check for smart quotes, ellipsis, or other special characters.', {
         provider: 'openrouter',
         code: 'INVALID_API_KEY',
@@ -73,7 +97,7 @@ export async function executeOpenRouter(
     // Initialize OpenAI client with OpenRouter configuration
     // OpenRouter uses an OpenAI-compatible API
     const client = new OpenAI({
-      apiKey: request.apiKey,
+      apiKey: sanitizedApiKey,
       baseURL: 'https://openrouter.ai/api/v1',
       defaultHeaders: {
         'HTTP-Referer': 'https://expandnote.app', // Optional: for rankings on openrouter.ai
@@ -81,15 +105,15 @@ export async function executeOpenRouter(
       },
     });
 
-    // Construct messages array
+    // Construct messages array with sanitized prompts
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
       {
         role: 'system',
-        content: request.systemPrompt,
+        content: sanitizedSystemPrompt,
       },
       {
         role: 'user',
-        content: request.userPrompt,
+        content: sanitizedUserPrompt,
       },
     ];
 
