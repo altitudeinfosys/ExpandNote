@@ -62,6 +62,14 @@ export async function executeOpenRouter(
       });
     }
 
+    // Check for non-ASCII characters in API key
+    if (!/^[\x00-\x7F]*$/.test(request.apiKey)) {
+      throw new AIProviderError('OpenRouter API key contains invalid characters. Please check for smart quotes, ellipsis, or other special characters.', {
+        provider: 'openrouter',
+        code: 'INVALID_API_KEY',
+      });
+    }
+
     // Initialize OpenAI client with OpenRouter configuration
     // OpenRouter uses an OpenAI-compatible API
     const client = new OpenAI({
