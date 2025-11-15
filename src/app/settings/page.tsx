@@ -9,7 +9,8 @@ type UserSettings = {
   user_id: string;
   openai_api_key: string | null;
   claude_api_key: string | null;
-  default_ai_provider: 'openai' | 'claude';
+  openrouter_api_key: string | null;
+  default_ai_provider: 'openai' | 'claude' | 'openrouter';
   enable_auto_tagging: boolean;
   default_sort: string;
   theme: 'light' | 'dark';
@@ -53,7 +54,8 @@ function SettingsContent() {
   // Form state for settings
   const [openaiKey, setOpenaiKey] = useState('');
   const [claudeKey, setClaudeKey] = useState('');
-  const [defaultProvider, setDefaultProvider] = useState<'openai' | 'claude'>('openai');
+  const [openrouterKey, setOpenrouterKey] = useState('');
+  const [defaultProvider, setDefaultProvider] = useState<'openai' | 'claude' | 'openrouter'>('openai');
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -89,6 +91,7 @@ function SettingsContent() {
         setSettings(data);
         setOpenaiKey(data.openai_api_key || '');
         setClaudeKey(data.claude_api_key || '');
+        setOpenrouterKey(data.openrouter_api_key || '');
         setDefaultProvider(data.default_ai_provider || 'openai');
       }
     } catch (error) {
@@ -119,6 +122,7 @@ function SettingsContent() {
         body: JSON.stringify({
           openai_api_key: openaiKey || null,
           claude_api_key: claudeKey || null,
+          openrouter_api_key: openrouterKey || null,
           default_ai_provider: defaultProvider,
         }),
       });
@@ -356,15 +360,43 @@ function SettingsContent() {
 
                     <div>
                       <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                        OpenRouter API Key
+                      </label>
+                      <input
+                        type="password"
+                        value={openrouterKey}
+                        onChange={(e) => setOpenrouterKey(e.target.value)}
+                        placeholder={settings?.openrouter_api_key ? 'sk-or-...••••' : 'sk-or-...'}
+                        className="w-full px-4 py-3 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--foreground)] focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                      />
+                      <p className="mt-2 text-sm text-[var(--foreground-secondary)] flex items-center gap-1">
+                        <span className="material-symbols-outlined text-base">info</span>
+                        <span>
+                          Get your API key from{' '}
+                          <a
+                            href="https://openrouter.ai/keys"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline"
+                          >
+                            OpenRouter dashboard
+                          </a>
+                        </span>
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
                         Default AI Provider
                       </label>
                       <select
                         value={defaultProvider}
-                        onChange={(e) => setDefaultProvider(e.target.value as 'openai' | 'claude')}
+                        onChange={(e) => setDefaultProvider(e.target.value as 'openai' | 'claude' | 'openrouter')}
                         className="w-full px-4 py-3 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--foreground)] focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                       >
                         <option value="openai">OpenAI</option>
                         <option value="claude">Claude</option>
+                        <option value="openrouter">OpenRouter</option>
                       </select>
                     </div>
 
