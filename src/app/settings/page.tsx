@@ -12,7 +12,7 @@ type UserSettings = {
   default_ai_provider: 'openai' | 'claude';
   enable_auto_tagging: boolean;
   default_sort: string;
-  theme: 'auto' | 'light' | 'dark';
+  theme: 'light' | 'dark';
 };
 
 type AIProfile = {
@@ -70,18 +70,16 @@ function SettingsContent() {
     }
   }, [user]);
 
-  // Sync theme from database to context ONLY on initial load (not when settings change)
+  // Sync theme from database to context ONLY on initial load
   useEffect(() => {
     if (settings?.theme && !loading) {
-      // Only sync if the DB theme differs from current context theme
-      // This prevents overriding user's theme choice during the session
-      const dbTheme = settings.theme as 'auto' | 'light' | 'dark';
+      const dbTheme = settings.theme as 'light' | 'dark';
       if (dbTheme !== currentTheme) {
         setTheme(dbTheme);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading]); // Only run when loading completes, not when settings change
+  }, [loading]);
 
   const fetchSettings = async () => {
     try {
@@ -183,8 +181,11 @@ function SettingsContent() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-gray-600 dark:text-gray-300">Loading settings...</div>
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-[var(--foreground-secondary)]">Loading settings...</p>
+        </div>
       </div>
     );
   }
@@ -194,74 +195,88 @@ function SettingsContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-[var(--background)] overflow-x-hidden">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+      <header className="bg-[var(--background-surface)] border-b border-[var(--border)]">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.push('/dashboard')}
-              className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+              className="p-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background)] rounded-lg transition-colors"
             >
-              ← Back to Dashboard
+              <span className="material-symbols-outlined">arrow_back</span>
             </button>
-            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Settings</h1>
+            <h1 className="text-2xl font-semibold text-[var(--foreground)]">Settings</h1>
           </div>
+
+          <button
+            onClick={() => setTheme(currentTheme === 'dark' ? 'light' : 'dark')}
+            className="p-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background)] rounded-lg transition-colors"
+            title={currentTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            <span className="material-symbols-outlined text-xl">
+              {currentTheme === 'dark' ? 'light_mode' : 'dark_mode'}
+            </span>
+          </button>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="w-full max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <div className="flex flex-col lg:grid lg:grid-cols-4 gap-4 sm:gap-6">
           {/* Sidebar Navigation */}
           <div className="lg:col-span-1">
-            <nav className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-              <ul className="space-y-2">
+            <nav className="bg-[var(--background-surface)] rounded-xl border border-[var(--border)] p-1.5 sm:p-2">
+              <ul className="space-y-1">
                 <li>
                   <button
                     onClick={() => setActiveSection('account')}
-                    className={`w-full text-left px-4 py-2 rounded-lg ${
+                    className={`w-full text-left px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-colors flex items-center gap-2 sm:gap-3 ${
                       activeSection === 'account'
-                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        ? 'bg-primary text-white'
+                        : 'text-[var(--foreground)] hover:bg-[var(--background)]'
                     }`}
                   >
-                    Account
+                    <span className="material-symbols-outlined text-lg sm:text-xl">person</span>
+                    <span className="font-medium text-sm sm:text-base">Account</span>
                   </button>
                 </li>
                 <li>
                   <button
                     onClick={() => setActiveSection('ai-config')}
-                    className={`w-full text-left px-4 py-2 rounded-lg ${
+                    className={`w-full text-left px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-colors flex items-center gap-2 sm:gap-3 ${
                       activeSection === 'ai-config'
-                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        ? 'bg-primary text-white'
+                        : 'text-[var(--foreground)] hover:bg-[var(--background)]'
                     }`}
                   >
-                    AI Configuration
+                    <span className="material-symbols-outlined text-lg sm:text-xl">key</span>
+                    <span className="font-medium text-sm sm:text-base">AI Configuration</span>
                   </button>
                 </li>
                 <li>
                   <button
                     onClick={() => setActiveSection('ai-profiles')}
-                    className={`w-full text-left px-4 py-2 rounded-lg ${
+                    className={`w-full text-left px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-colors flex items-center gap-2 sm:gap-3 ${
                       activeSection === 'ai-profiles'
-                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        ? 'bg-primary text-white'
+                        : 'text-[var(--foreground)] hover:bg-[var(--background)]'
                     }`}
                   >
-                    AI Profiles ({profiles.length})
+                    <span className="material-symbols-outlined text-lg sm:text-xl">auto_awesome</span>
+                    <span className="font-medium text-sm sm:text-base">AI Profiles ({profiles.length})</span>
                   </button>
                 </li>
                 <li>
                   <button
                     onClick={() => setActiveSection('app-settings')}
-                    className={`w-full text-left px-4 py-2 rounded-lg ${
+                    className={`w-full text-left px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-colors flex items-center gap-2 sm:gap-3 ${
                       activeSection === 'app-settings'
-                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        ? 'bg-primary text-white'
+                        : 'text-[var(--foreground)] hover:bg-[var(--background)]'
                     }`}
                   >
-                    App Settings
+                    <span className="material-symbols-outlined text-lg sm:text-xl">tune</span>
+                    <span className="font-medium text-sm sm:text-base">App Settings</span>
                   </button>
                 </li>
               </ul>
@@ -270,29 +285,30 @@ function SettingsContent() {
 
           {/* Main Content */}
           <div className="lg:col-span-3">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div className="bg-[var(--background-surface)] rounded-xl border border-[var(--border)] p-4 sm:p-6">
               {/* Account Section */}
               {activeSection === 'account' && (
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Account</h2>
-                  <div className="space-y-4">
+                  <h2 className="text-xl font-semibold text-[var(--foreground)] mb-6">Account</h2>
+                  <div className="space-y-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
                         Email
                       </label>
                       <input
                         type="email"
                         value={user.email || ''}
                         disabled
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                        className="w-full px-4 py-3 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--foreground-secondary)] cursor-not-allowed"
                       />
                     </div>
-                    <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div className="pt-4 border-t border-[var(--border)]">
                       <button
                         onClick={handleSignOut}
-                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                        className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center gap-2"
                       >
-                        Sign Out
+                        <span className="material-symbols-outlined text-xl">logout</span>
+                        <span>Sign Out</span>
                       </button>
                     </div>
                   </div>
@@ -302,10 +318,10 @@ function SettingsContent() {
               {/* AI Configuration Section */}
               {activeSection === 'ai-config' && (
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">AI Configuration</h2>
-                  <div className="space-y-4">
+                  <h2 className="text-xl font-semibold text-[var(--foreground)] mb-6">AI Configuration</h2>
+                  <div className="space-y-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
                         OpenAI API Key
                       </label>
                       <input
@@ -313,15 +329,16 @@ function SettingsContent() {
                         value={openaiKey}
                         onChange={(e) => setOpenaiKey(e.target.value)}
                         placeholder={settings?.openai_api_key ? 'sk-...••••' : 'sk-...'}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-4 py-3 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--foreground)] focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                       />
-                      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        🔒 Encrypted at rest with AES-256 • Never logged or shared
+                      <p className="mt-2 text-sm text-[var(--foreground-secondary)] flex items-center gap-1">
+                        <span className="material-symbols-outlined text-base">lock</span>
+                        <span>Encrypted at rest with AES-256 • Never logged or shared</span>
                       </p>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
                         Claude API Key
                       </label>
                       <input
@@ -329,21 +346,22 @@ function SettingsContent() {
                         value={claudeKey}
                         onChange={(e) => setClaudeKey(e.target.value)}
                         placeholder={settings?.claude_api_key ? 'sk-ant-...••••' : 'sk-ant-...'}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-4 py-3 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--foreground)] focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                       />
-                      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        🔒 Encrypted at rest with AES-256 • Never logged or shared
+                      <p className="mt-2 text-sm text-[var(--foreground-secondary)] flex items-center gap-1">
+                        <span className="material-symbols-outlined text-base">lock</span>
+                        <span>Encrypted at rest with AES-256 • Never logged or shared</span>
                       </p>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
                         Default AI Provider
                       </label>
                       <select
                         value={defaultProvider}
                         onChange={(e) => setDefaultProvider(e.target.value as 'openai' | 'claude')}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-4 py-3 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--foreground)] focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                       >
                         <option value="openai">OpenAI</option>
                         <option value="claude">Claude</option>
@@ -354,9 +372,10 @@ function SettingsContent() {
                       <button
                         onClick={saveSettings}
                         disabled={saving}
-                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center gap-2"
                       >
-                        {saving ? 'Saving...' : 'Save Settings'}
+                        <span className="material-symbols-outlined text-xl">save</span>
+                        <span>{saving ? 'Saving...' : 'Save Settings'}</span>
                       </button>
                     </div>
                   </div>
@@ -366,75 +385,80 @@ function SettingsContent() {
               {/* AI Profiles Section */}
               {activeSection === 'ai-profiles' && (
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">AI Profiles</h2>
-                    <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+                    <h2 className="text-xl font-semibold text-[var(--foreground)]">AI Profiles</h2>
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <button
                         onClick={() => router.push('/settings/ai-logs')}
-                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                        className="px-3 sm:px-4 py-2 border border-[var(--border)] text-[var(--foreground)] rounded-lg hover:bg-[var(--background)] transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
                       >
-                        View Execution Logs
+                        <span className="material-symbols-outlined text-lg sm:text-xl">history</span>
+                        <span>Execution Logs</span>
                       </button>
                       <button
                         onClick={() => router.push('/settings/ai-profiles/new')}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        className="px-3 sm:px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors flex items-center justify-center gap-2 font-medium text-sm sm:text-base"
                       >
-                        Create New Profile
+                        <span className="material-symbols-outlined text-lg sm:text-xl">add</span>
+                        <span>Create New Profile</span>
                       </button>
                     </div>
                   </div>
 
                   {profiles.length === 0 ? (
-                    <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                      <p className="mb-2">No AI Profiles yet</p>
-                      <p className="text-sm">Create a profile to automate AI tasks when you tag notes</p>
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-[var(--background)] rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span className="material-symbols-outlined text-[var(--foreground-secondary)] text-3xl">auto_awesome</span>
+                      </div>
+                      <p className="text-[var(--foreground)] font-medium mb-2">No AI Profiles yet</p>
+                      <p className="text-sm text-[var(--foreground-secondary)] mb-4">Create a profile to automate AI tasks when you tag notes</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
                       {profiles.map((profile) => (
                         <div
                           key={profile.id}
-                          className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                          className="border border-[var(--border)] rounded-lg p-4 hover:bg-[var(--background)] transition-colors"
                         >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                <h3 className="font-medium text-gray-900 dark:text-white">{profile.name}</h3>
-                                <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded">
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2 mb-2">
+                                <h3 className="font-semibold text-[var(--foreground)]">{profile.name}</h3>
+                                <span className="px-2 py-1 text-xs rounded-full bg-[var(--ai-purple)]/10 text-[var(--ai-purple)] font-medium">
                                   #{profile.tags.name}
                                 </span>
-                                <span className={`px-2 py-1 text-xs rounded ${
+                                <span className={`px-2 py-1 text-xs rounded-full font-medium ${
                                   profile.is_active
-                                    ? 'bg-green-100 text-green-700'
-                                    : 'bg-gray-100 text-gray-600'
+                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                    : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
                                 }`}>
                                   {profile.is_active ? 'Active' : 'Inactive'}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-sm text-[var(--foreground-secondary)]">
                                 <span>{profile.ai_provider === 'openai' ? 'OpenAI' : 'Claude'} - {profile.model}</span>
-                                <span>•</span>
+                                <span className="hidden sm:inline">•</span>
                                 <span>Trigger: {profile.trigger_mode}</span>
-                                <span>•</span>
+                                <span className="hidden sm:inline">•</span>
                                 <span>Output: {profile.output_behavior}</span>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-shrink-0">
                               <button
                                 onClick={() => toggleProfileActive(profile.id, profile.is_active)}
-                                className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                                className="px-3 py-1.5 text-sm text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background)] rounded-lg transition-colors"
                               >
                                 {profile.is_active ? 'Deactivate' : 'Activate'}
                               </button>
                               <button
                                 onClick={() => router.push(`/settings/ai-profiles/${profile.id}`)}
-                                className="px-3 py-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+                                className="px-3 py-1.5 text-sm text-primary hover:bg-primary/10 rounded-lg transition-colors font-medium"
                               >
                                 Edit
                               </button>
                               <button
                                 onClick={() => deleteProfile(profile.id)}
-                                className="px-3 py-1 text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                                className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors font-medium"
                               >
                                 Delete
                               </button>
@@ -450,12 +474,12 @@ function SettingsContent() {
               {/* App Settings Section */}
               {activeSection === 'app-settings' && (
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">App Settings</h2>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700">
+                  <h2 className="text-xl font-semibold text-[var(--foreground)] mb-6">App Settings</h2>
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between py-4 border-b border-[var(--border)]">
                       <div>
-                        <label className="font-medium text-gray-900 dark:text-white">Enable Auto-tagging</label>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">AI suggests tags for new notes</p>
+                        <label className="font-medium text-[var(--foreground)]">Enable Auto-tagging</label>
+                        <p className="text-sm text-[var(--foreground-secondary)] mt-1">AI suggests tags for new notes</p>
                       </div>
                       <input
                         type="checkbox"
@@ -473,7 +497,7 @@ function SettingsContent() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
                         Default Sort
                       </label>
                       <select
@@ -485,7 +509,7 @@ function SettingsContent() {
                             body: JSON.stringify({ default_sort: e.target.value }),
                           }).then(() => fetchSettings());
                         }}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-4 py-3 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--foreground)] focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                       >
                         <option value="modified_desc">Last Modified</option>
                         <option value="created_desc">Recently Created</option>
@@ -494,28 +518,24 @@ function SettingsContent() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
                         Theme
                       </label>
                       <select
                         value={currentTheme}
                         onChange={(e) => {
-                          const newTheme = e.target.value as 'auto' | 'light' | 'dark';
-                          // Update context immediately for instant UI feedback
+                          const newTheme = e.target.value as 'light' | 'dark';
                           setTheme(newTheme);
-                          // Save to database in background (don't refetch to avoid race condition)
                           fetch('/api/settings', {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ theme: newTheme }),
                           }).catch((error) => {
                             console.error('Failed to save theme to database:', error);
-                            // Could show a toast notification here
                           });
                         }}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-4 py-3 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--foreground)] focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                       >
-                        <option value="auto">Auto</option>
                         <option value="light">Light</option>
                         <option value="dark">Dark</option>
                       </select>
@@ -534,8 +554,11 @@ function SettingsContent() {
 export default function SettingsPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-gray-600 dark:text-gray-300">Loading settings...</div>
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-[var(--foreground-secondary)]">Loading settings...</p>
+        </div>
       </div>
     }>
       <SettingsContent />
