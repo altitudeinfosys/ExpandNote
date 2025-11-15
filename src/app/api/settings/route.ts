@@ -30,6 +30,10 @@ export async function GET() {
         user_id: user.id,
         openai_api_key: null,
         claude_api_key: null,
+        openrouter_api_key: null,
+        openai_api_key_configured: false,
+        claude_api_key_configured: false,
+        openrouter_api_key_configured: false,
         default_ai_provider: 'openai',
         enable_auto_tagging: true,
         default_sort: 'modified_desc',
@@ -40,6 +44,7 @@ export async function GET() {
     // Decrypt API keys if they exist
     let openaiKey = null;
     let claudeKey = null;
+    let openrouterKey = null;
 
     if (settings.openai_api_key_encrypted) {
       openaiKey = await decryptApiKey(settings.openai_api_key_encrypted);
@@ -75,13 +80,22 @@ export async function GET() {
       }).catch(err => console.error('Failed to migrate Claude key:', err));
     }
 
+    if (settings.openrouter_api_key_encrypted) {
+      openrouterKey = await decryptApiKey(settings.openrouter_api_key_encrypted);
+    }
+
     return NextResponse.json({
       ...settings,
       openai_api_key: openaiKey,
       claude_api_key: claudeKey,
+      openrouter_api_key: openrouterKey,
+      openai_api_key_configured: !!settings.openai_api_key_encrypted,
+      claude_api_key_configured: !!settings.claude_api_key_encrypted,
+      openrouter_api_key_configured: !!settings.openrouter_api_key_encrypted,
       // Don't send encrypted versions to client
       openai_api_key_encrypted: undefined,
-      claude_api_key_encrypted: undefined
+      claude_api_key_encrypted: undefined,
+      openrouter_api_key_encrypted: undefined
     });
   } catch (error) {
     console.error('Error in GET /api/settings:', error);
@@ -104,6 +118,7 @@ export async function PUT(request: NextRequest) {
     const {
       openai_api_key,
       claude_api_key,
+      openrouter_api_key,
       default_ai_provider,
       enable_auto_tagging,
       default_sort,
@@ -111,7 +126,7 @@ export async function PUT(request: NextRequest) {
     } = body;
 
     // Validate enums if provided
-    if (default_ai_provider && !['openai', 'claude'].includes(default_ai_provider)) {
+    if (default_ai_provider && !['openai', 'claude', 'openrouter'].includes(default_ai_provider)) {
       return NextResponse.json({ error: 'Invalid AI provider' }, { status: 400 });
     }
 
@@ -147,6 +162,16 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    // Handle OpenRouter API key
+    if (openrouter_api_key !== undefined) {
+      if (openrouter_api_key === null || openrouter_api_key === '') {
+        updates.openrouter_api_key_encrypted = null;
+      } else {
+        const encrypted = await encryptApiKey(openrouter_api_key);
+        updates.openrouter_api_key_encrypted = encrypted;
+      }
+    }
+
     if (default_ai_provider !== undefined) updates.default_ai_provider = default_ai_provider;
     if (enable_auto_tagging !== undefined) updates.enable_auto_tagging = enable_auto_tagging;
     if (default_sort !== undefined) updates.default_sort = default_sort;
@@ -169,9 +194,11 @@ export async function PUT(request: NextRequest) {
       ...settings,
       openai_api_key: settings.openai_api_key_encrypted ? maskApiKey(openai_api_key) : null,
       claude_api_key: settings.claude_api_key_encrypted ? maskApiKey(claude_api_key) : null,
+      openrouter_api_key: settings.openrouter_api_key_encrypted ? maskApiKey(openrouter_api_key) : null,
       // Don't send encrypted versions to client
       openai_api_key_encrypted: undefined,
-      claude_api_key_encrypted: undefined
+      claude_api_key_encrypted: undefined,
+      openrouter_api_key_encrypted: undefined
     });
   } catch (error) {
     console.error('Error in PUT /api/settings:', error);
