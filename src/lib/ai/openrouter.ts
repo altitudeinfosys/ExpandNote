@@ -7,6 +7,43 @@ import OpenAI from 'openai';
 import { AIExecutionRequest, AIExecutionResponse, AIProviderError } from './types';
 
 /**
+ * Available OpenRouter models with their display names
+ * Used for model selection dropdowns in UI components
+ */
+export const OPENROUTER_MODELS = [
+  // Anthropic models via OpenRouter
+  { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet' },
+  { id: 'anthropic/claude-3.5-haiku', name: 'Claude 3.5 Haiku' },
+  { id: 'anthropic/claude-3-opus', name: 'Claude 3 Opus' },
+  { id: 'anthropic/claude-3-sonnet', name: 'Claude 3 Sonnet' },
+  { id: 'anthropic/claude-3-haiku', name: 'Claude 3 Haiku' },
+  // OpenAI models via OpenRouter
+  { id: 'openai/gpt-4o', name: 'GPT-4o' },
+  { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini' },
+  { id: 'openai/gpt-4-turbo', name: 'GPT-4 Turbo' },
+  { id: 'openai/gpt-4', name: 'GPT-4' },
+  { id: 'openai/gpt-3.5-turbo', name: 'GPT-3.5 Turbo' },
+  // Meta Llama models
+  { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B' },
+  { id: 'meta-llama/llama-3.1-405b-instruct', name: 'Llama 3.1 405B' },
+  { id: 'meta-llama/llama-3.1-70b-instruct', name: 'Llama 3.1 70B' },
+  { id: 'meta-llama/llama-3.1-8b-instruct', name: 'Llama 3.1 8B' },
+  // Google Gemini models
+  { id: 'google/gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash' },
+  { id: 'google/gemini-pro-1.5', name: 'Gemini Pro 1.5' },
+  { id: 'google/gemini-flash-1.5', name: 'Gemini Flash 1.5' },
+  // Mistral models
+  { id: 'mistralai/mistral-large', name: 'Mistral Large' },
+  { id: 'mistralai/mistral-medium', name: 'Mistral Medium' },
+  { id: 'mistralai/mistral-small', name: 'Mistral Small' },
+  // DeepSeek models
+  { id: 'deepseek/deepseek-chat', name: 'DeepSeek Chat' },
+  // Qwen models
+  { id: 'qwen/qwen-2.5-72b-instruct', name: 'Qwen 2.5 72B' },
+  { id: 'qwen/qwen-2.5-32b-instruct', name: 'Qwen 2.5 32B' },
+] as const;
+
+/**
  * Execute an AI request using OpenRouter's unified API
  * OpenRouter supports models from OpenAI, Anthropic, Meta, Google, and more
  * @param request - The execution request with prompts and configuration
@@ -107,10 +144,9 @@ export async function executeOpenRouter(
  * Estimate token count for a text string
  * Useful for pre-validation and cost estimation
  * @param text - The text to count tokens for
- * @param model - The model to use for tokenization
  * @returns Approximate token count
  */
-export function estimateOpenRouterTokens(text: string, model: string): number {
+export function estimateOpenRouterTokens(text: string): number {
   // Simple estimation: 1 token ≈ 4 characters for English text
   // This is a rough approximation but avoids tokenization library dependencies
   return Math.ceil(text.length / 4);
@@ -122,40 +158,7 @@ export function estimateOpenRouterTokens(text: string, model: string): number {
  * @returns True if the model is supported
  */
 export function isSupportedOpenRouterModel(model: string): boolean {
-  const supportedModels = [
-    // Anthropic models via OpenRouter
-    'anthropic/claude-3.5-sonnet',
-    'anthropic/claude-3.5-haiku',
-    'anthropic/claude-3-opus',
-    'anthropic/claude-3-sonnet',
-    'anthropic/claude-3-haiku',
-    // OpenAI models via OpenRouter
-    'openai/gpt-4o',
-    'openai/gpt-4o-mini',
-    'openai/gpt-4-turbo',
-    'openai/gpt-4',
-    'openai/gpt-3.5-turbo',
-    // Meta Llama models
-    'meta-llama/llama-3.3-70b-instruct',
-    'meta-llama/llama-3.1-405b-instruct',
-    'meta-llama/llama-3.1-70b-instruct',
-    'meta-llama/llama-3.1-8b-instruct',
-    // Google Gemini models
-    'google/gemini-2.0-flash-exp',
-    'google/gemini-pro-1.5',
-    'google/gemini-flash-1.5',
-    // Mistral models
-    'mistralai/mistral-large',
-    'mistralai/mistral-medium',
-    'mistralai/mistral-small',
-    // DeepSeek models
-    'deepseek/deepseek-chat',
-    // Qwen models
-    'qwen/qwen-2.5-72b-instruct',
-    'qwen/qwen-2.5-32b-instruct',
-  ];
-
-  return supportedModels.includes(model);
+  return OPENROUTER_MODELS.some(m => m.id === model);
 }
 
 /**
