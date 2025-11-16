@@ -32,7 +32,7 @@ export interface NoteTag {
   created_at: string;
 }
 
-export type AIProvider = 'openai' | 'claude';
+export type AIProvider = 'openai' | 'claude' | 'openrouter';
 export type TriggerMode = 'automatic' | 'manual';
 export type OutputBehavior = 'append' | 'new_note' | 'replace';
 

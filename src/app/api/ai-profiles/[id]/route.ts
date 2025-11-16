@@ -71,7 +71,7 @@ export async function PUT(
     } = body;
 
     // Validate enums if provided
-    if (ai_provider && !['openai', 'claude'].includes(ai_provider)) {
+    if (ai_provider && !['openai', 'claude', 'openrouter'].includes(ai_provider)) {
       return NextResponse.json({ error: 'Invalid AI provider' }, { status: 400 });
     }
 

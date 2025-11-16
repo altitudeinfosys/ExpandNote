@@ -17,6 +17,23 @@ export const MODEL_TOKEN_LIMITS = {
   'claude-3-sonnet-20240229': 200000,
   'claude-3-haiku-20240307': 200000,
   'claude-3-5-sonnet-20241022': 200000,
+  // OpenRouter models (updated 2025-11 with verified models)
+  'anthropic/claude-3.5-sonnet': 200000,
+  'anthropic/claude-3-opus': 200000,
+  'anthropic/claude-3-haiku': 200000,
+  'openai/gpt-4o': 128000,
+  'openai/gpt-4o-mini': 128000,
+  'openai/gpt-4-turbo': 128000,
+  'google/gemini-pro-1.5': 1000000,
+  'google/gemini-2.5-pro': 1000000,
+  'google/gemini-2.5-flash': 1000000,
+  'meta-llama/llama-3.1-405b-instruct': 131072,
+  'meta-llama/llama-3.1-70b-instruct': 131072,
+  'meta-llama/llama-3.1-8b-instruct': 131072,
+  'mistralai/mistral-large': 32768,
+  'mistralai/mixtral-8x7b-instruct': 32768,
+  'deepseek/deepseek-chat': 64000,
+  'deepseek/deepseek-r1': 64000,
 } as const;
 
 export type AIModel = keyof typeof MODEL_TOKEN_LIMITS;
@@ -37,20 +54,20 @@ export interface AIExecutionResponse {
 export interface AIExecutionError extends Error {
   code?: string;
   statusCode?: number;
-  provider?: 'openai' | 'anthropic';
+  provider?: 'openai' | 'anthropic' | 'openrouter';
 }
 
 export class AIProviderError extends Error implements AIExecutionError {
   code?: string;
   statusCode?: number;
-  provider?: 'openai' | 'anthropic';
+  provider?: 'openai' | 'anthropic' | 'openrouter';
 
   constructor(
     message: string,
     options?: {
       code?: string;
       statusCode?: number;
-      provider?: 'openai' | 'anthropic';
+      provider?: 'openai' | 'anthropic' | 'openrouter';
     }
   ) {
     super(message);

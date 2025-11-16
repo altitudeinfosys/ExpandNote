@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { executeOpenAI } from '@/lib/ai/openai';
 import { executeAnthropic } from '@/lib/ai/anthropic';
+import { executeOpenRouter } from '@/lib/ai/openrouter';
 import { substitutePromptVariables } from '@/lib/ai/prompt-template';
 import { decryptApiKey } from '@/lib/encryption';
 import { AIProviderError, MODEL_TOKEN_LIMITS } from '@/lib/ai/types';
@@ -112,7 +113,7 @@ export async function POST(
     // Get user's API keys (encrypted)
     const { data: settings, error: settingsError } = await supabase
       .from('user_settings')
-      .select('openai_api_key_encrypted, claude_api_key_encrypted')
+      .select('openai_api_key_encrypted, claude_api_key_encrypted, openrouter_api_key_encrypted')
       .eq('user_id', user.id)
       .single();
 
@@ -131,11 +132,16 @@ export async function POST(
       encryptedApiKey = settings.openai_api_key_encrypted;
     } else if (provider === 'claude') {
       encryptedApiKey = settings.claude_api_key_encrypted;
+    } else if (provider === 'openrouter') {
+      encryptedApiKey = settings.openrouter_api_key_encrypted;
     }
 
     if (!encryptedApiKey) {
+      const providerName =
+        provider === 'openai' ? 'OpenAI' :
+        provider === 'claude' ? 'Claude' : 'OpenRouter';
       return NextResponse.json(
-        { error: `${provider === 'openai' ? 'OpenAI' : 'Claude'} API key not configured. Please add it in settings.` },
+        { error: `${providerName} API key not configured. Please add it in settings.` },
         { status: 400 }
       );
     }
@@ -197,6 +203,15 @@ export async function POST(
         tokensUsed = response.tokensUsed;
       } else if (provider === 'claude') {
         const response = await executeAnthropic({
+          systemPrompt,
+          userPrompt,
+          model: profile.model,
+          apiKey,
+        });
+        aiResponse = response.content;
+        tokensUsed = response.tokensUsed;
+      } else if (provider === 'openrouter') {
+        const response = await executeOpenRouter({
           systemPrompt,
           userPrompt,
           model: profile.model,

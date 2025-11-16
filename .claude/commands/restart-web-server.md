@@ -3,9 +3,9 @@ description: Kill Next.js dev server on port 3003 and restart it.
 allowed-tools: >
   Bash(lsof:*), Bash(kill -9:*),
   Bash(npm run dev:*), Bash(nohup:*), Bash(tail:*), Bash(grep:*)
-model: claude-3-7-sonnet-20250219
+model: haiku
 ---
-## Objective 
+## Objective
 Restart the Next.js dev server on port 3003, by killing the process and restarting it in the background.
 And also to ensure that the latest changes are reflected in the server.
 
