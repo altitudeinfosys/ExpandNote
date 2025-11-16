@@ -181,11 +181,11 @@ export default function NewAIProfilePage() {
       </header>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <form onSubmit={handleSubmit} className="bg-[var(--background-surface)] rounded-lg shadow-sm border border-[var(--border)] p-6">
+        <form onSubmit={handleSubmit} className="bg-[var(--background-surface)] rounded-xl shadow-sm border border-[var(--border)] p-6">
           <div className="space-y-6">
             {/* Profile Name */}
             <div>
-              <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
                 Profile Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -193,20 +193,20 @@ export default function NewAIProfilePage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g., YouTube Video Summarizer"
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--foreground)] placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--foreground)] focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                 required
               />
             </div>
 
             {/* Tag Trigger */}
             <div>
-              <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
                 Tag Trigger <span className="text-red-500">*</span>
               </label>
               <select
                 value={tagId}
                 onChange={(e) => setTagId(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--foreground)] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--foreground)] focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                 required
               >
                 <option value="">Select a tag...</option>
@@ -269,13 +269,13 @@ export default function NewAIProfilePage() {
 
             {/* Model */}
             <div>
-              <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
                 Model <span className="text-red-500">*</span>
               </label>
               <select
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--foreground)] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--foreground)] focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                 required
               >
                 {availableModels.map((m) => (
@@ -288,7 +288,7 @@ export default function NewAIProfilePage() {
 
             {/* System Prompt */}
             <div>
-              <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
                 System Prompt <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -296,17 +296,17 @@ export default function NewAIProfilePage() {
                 onChange={(e) => setSystemPrompt(e.target.value)}
                 placeholder="You are a helpful assistant that..."
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--foreground)] placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                className="w-full px-4 py-3 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--foreground)] focus:ring-2 focus:ring-primary focus:border-primary transition-colors font-mono text-sm"
                 required
               />
-              <p className="mt-1 text-sm text-[var(--foreground-secondary)]">
+              <p className="mt-2 text-sm text-[var(--foreground-secondary)]">
                 Context and instructions for the AI
               </p>
             </div>
 
             {/* User Prompt Template */}
             <div>
-              <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
                 User Prompt Template <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -314,10 +314,10 @@ export default function NewAIProfilePage() {
                 onChange={(e) => setUserPromptTemplate(e.target.value)}
                 placeholder="Analyze this content: {note_content}"
                 rows={6}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--foreground)] placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                className="w-full px-4 py-3 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--foreground)] focus:ring-2 focus:ring-primary focus:border-primary transition-colors font-mono text-sm"
                 required
               />
-              <p className="mt-1 text-sm text-[var(--foreground-secondary)]">
+              <p className="mt-2 text-sm text-[var(--foreground-secondary)]">
                 Available variables: {'{note_title}'}, {'{note_content}'}, {'{tags}'}
               </p>
             </div>
@@ -393,7 +393,7 @@ export default function NewAIProfilePage() {
             {/* Output Title Template (only for new_note) */}
             {outputBehavior === 'new_note' && (
               <div>
-                <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
                   New Note Title Template <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -401,10 +401,10 @@ export default function NewAIProfilePage() {
                   value={outputTitleTemplate}
                   onChange={(e) => setOutputTitleTemplate(e.target.value)}
                   placeholder="Summary: {note_title}"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[var(--foreground)] placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--foreground)] focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                   required
                 />
-                <p className="mt-1 text-sm text-[var(--foreground-secondary)]">
+                <p className="mt-2 text-sm text-[var(--foreground-secondary)]">
                   Template for the new note title. Use {'{note_title}'} for the original note title.
                 </p>
               </div>
@@ -428,7 +428,7 @@ export default function NewAIProfilePage() {
               <button
                 type="button"
                 onClick={() => router.push('/settings?section=ai-profiles')}
-                className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-[var(--foreground)] rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                className="px-6 py-3 border border-[var(--border)] text-[var(--foreground)] rounded-lg hover:bg-[var(--background)] transition-colors font-medium"
               >
                 Cancel
               </button>
