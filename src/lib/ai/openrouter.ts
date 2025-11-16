@@ -7,12 +7,12 @@ import OpenAI from 'openai';
 import { AIExecutionRequest, AIExecutionResponse, AIProviderError } from './types';
 
 /**
- * Sanitize text to ensure it only contains valid ASCII characters
- * Replaces common problematic characters with their ASCII equivalents
- * @param text - The text to sanitize
- * @returns Sanitized text safe for API transmission
+ * Normalize text by replacing problematic smart quotes and dashes
+ * Preserves Unicode characters (emoji, international text, etc.)
+ * @param text - The text to normalize
+ * @returns Normalized text with smart quotes replaced
  */
-function sanitizeText(text: string): string {
+function normalizeText(text: string): string {
   return text
     // Replace smart quotes with regular quotes
     .replace(/[\u201C\u201D]/g, '"')  // " and "
@@ -20,42 +20,43 @@ function sanitizeText(text: string): string {
     // Replace ellipsis with three periods
     .replace(/\u2026/g, '...')  // …
     // Replace em dash and en dash with regular dash
-    .replace(/[\u2013\u2014]/g, '-')  // – and —
-    // Remove any remaining non-ASCII characters
-    .replace(/[^\x00-\x7F]/g, '');
+    .replace(/[\u2013\u2014]/g, '-');  // – and —
+    // Note: Unicode characters (emoji, CJK, accents) are preserved
 }
 
 /**
  * Available OpenRouter models with their display names
  * Used for model selection dropdowns in UI components
- * Updated: 2025-01 with current OpenRouter model IDs
+ * Updated: 2025-11 with verified OpenRouter model IDs
  */
 export const OPENROUTER_MODELS = [
   // Anthropic models via OpenRouter
-  { id: 'anthropic/claude-sonnet-4.5', name: 'Claude Sonnet 4.5' },
-  { id: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5' },
+  { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet' },
+  { id: 'anthropic/claude-3-opus', name: 'Claude 3 Opus' },
+  { id: 'anthropic/claude-3-haiku', name: 'Claude 3 Haiku' },
+
   // OpenAI models via OpenRouter
-  { id: 'openai/gpt-5.1', name: 'GPT-5.1' },
-  { id: 'openai/gpt-5.1-chat', name: 'GPT-5.1 Chat' },
-  { id: 'openai/gpt-5-pro', name: 'GPT-5 Pro' },
-  { id: 'openai/o3-deep-research', name: 'o3 Deep Research' },
-  { id: 'openai/o4-mini-deep-research', name: 'o4 Mini Deep Research' },
+  { id: 'openai/gpt-4o', name: 'GPT-4o' },
+  { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini' },
+  { id: 'openai/gpt-4-turbo', name: 'GPT-4 Turbo' },
+
   // Google Gemini models
-  { id: 'google/gemini-2.5-flash-preview-09-2025', name: 'Gemini 2.5 Flash' },
-  { id: 'google/gemini-2.5-flash-lite-preview-09-2025', name: 'Gemini 2.5 Flash Lite' },
-  { id: 'google/gemini-2.5-flash-image', name: 'Gemini 2.5 Flash Image' },
+  { id: 'google/gemini-pro-1.5', name: 'Gemini Pro 1.5' },
+  { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
+  { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
+
   // Meta Llama models
-  { id: 'nvidia/llama-3.3-nemotron-super-49b-v1.5', name: 'Llama 3.3 Nemotron 49B' },
+  { id: 'meta-llama/llama-3.1-405b-instruct', name: 'Llama 3.1 405B' },
+  { id: 'meta-llama/llama-3.1-70b-instruct', name: 'Llama 3.1 70B' },
+  { id: 'meta-llama/llama-3.1-8b-instruct', name: 'Llama 3.1 8B' },
+
   // Mistral models
-  { id: 'mistralai/voxtral-small-24b-2507', name: 'Voxtral Small 24B' },
+  { id: 'mistralai/mistral-large', name: 'Mistral Large' },
+  { id: 'mistralai/mixtral-8x7b-instruct', name: 'Mixtral 8x7B' },
+
   // DeepSeek models
-  { id: 'deepseek/deepseek-v3.2-exp', name: 'DeepSeek V3.2' },
-  { id: 'deepseek/deepseek-v3.1-terminus', name: 'DeepSeek V3.1 Terminus' },
-  // Qwen models
-  { id: 'qwen/qwen3-max', name: 'Qwen3 Max' },
-  { id: 'qwen/qwen3-coder-plus', name: 'Qwen3 Coder Plus' },
-  { id: 'qwen/qwen3-next-80b-a3b-instruct', name: 'Qwen3 Next 80B' },
-  { id: 'qwen/qwen-plus-2025-07-28', name: 'Qwen Plus' },
+  { id: 'deepseek/deepseek-chat', name: 'DeepSeek Chat' },
+  { id: 'deepseek/deepseek-r1', name: 'DeepSeek R1' },
 ] as const;
 
 /**
@@ -77,35 +78,17 @@ export async function executeOpenRouter(
       });
     }
 
-    // Sanitize API key and prompts to remove non-ASCII characters
-    const sanitizedApiKey = sanitizeText(request.apiKey.trim());
-    const sanitizedSystemPrompt = sanitizeText(request.systemPrompt);
-    const sanitizedUserPrompt = sanitizeText(request.userPrompt);
+    // Get API key (no sanitization - API keys are alphanumeric)
+    const apiKey = request.apiKey.trim();
 
-    // Check if API key is still valid after sanitization
-    if (!sanitizedApiKey || sanitizedApiKey === '') {
-      console.error('OpenRouter API key validation failed:', {
-        originalLength: request.apiKey.length,
-        sanitizedLength: sanitizedApiKey.length,
-        originalKey: request.apiKey.substring(0, 10) + '...',
-      });
-      throw new AIProviderError('OpenRouter API key is invalid or contains too many special characters. Please re-enter your API key from OpenRouter dashboard.', {
-        provider: 'openrouter',
-        code: 'INVALID_API_KEY',
-      });
-    }
-
-    // Log API key info for debugging (first 10 chars only)
-    console.log('OpenRouter API key validation:', {
-      originalLength: request.apiKey.length,
-      sanitizedLength: sanitizedApiKey.length,
-      prefix: sanitizedApiKey.substring(0, 10),
-    });
+    // Normalize prompts (replace smart quotes, preserve Unicode)
+    const normalizedSystemPrompt = normalizeText(request.systemPrompt);
+    const normalizedUserPrompt = normalizeText(request.userPrompt);
 
     // Initialize OpenAI client with OpenRouter configuration
     // OpenRouter uses an OpenAI-compatible API
     const client = new OpenAI({
-      apiKey: sanitizedApiKey,
+      apiKey,
       baseURL: 'https://openrouter.ai/api/v1',
       defaultHeaders: {
         'HTTP-Referer': 'https://expandnote.app', // Optional: for rankings on openrouter.ai
@@ -113,15 +96,15 @@ export async function executeOpenRouter(
       },
     });
 
-    // Construct messages array with sanitized prompts
+    // Construct messages array with normalized prompts
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
       {
         role: 'system',
-        content: sanitizedSystemPrompt,
+        content: normalizedSystemPrompt,
       },
       {
         role: 'user',
-        content: sanitizedUserPrompt,
+        content: normalizedUserPrompt,
       },
     ];
 
@@ -209,31 +192,33 @@ export function isSupportedOpenRouterModel(model: string): boolean {
 export function getOpenRouterMaxTokens(model: string): number {
   // Model-specific max tokens based on known limits
   const maxTokensMap: Record<string, number> = {
-    // Anthropic models
-    'anthropic/claude-sonnet-4.5': 8192,
-    'anthropic/claude-haiku-4.5': 8192,
+    // Anthropic models - 200K context, 8K output
+    'anthropic/claude-3.5-sonnet': 8192,
+    'anthropic/claude-3-opus': 4096,
+    'anthropic/claude-3-haiku': 4096,
+
     // OpenAI models
-    'openai/gpt-5.1': 16384,
-    'openai/gpt-5.1-chat': 16384,
-    'openai/gpt-5-pro': 16384,
-    'openai/o3-deep-research': 32768,
-    'openai/o4-mini-deep-research': 16384,
+    'openai/gpt-4o': 16384,
+    'openai/gpt-4o-mini': 16384,
+    'openai/gpt-4-turbo': 4096,
+
     // Google Gemini models
-    'google/gemini-2.5-flash-preview-09-2025': 8192,
-    'google/gemini-2.5-flash-lite-preview-09-2025': 8192,
-    'google/gemini-2.5-flash-image': 8192,
+    'google/gemini-pro-1.5': 8192,
+    'google/gemini-2.5-pro': 8192,
+    'google/gemini-2.5-flash': 8192,
+
     // Meta Llama models
-    'nvidia/llama-3.3-nemotron-super-49b-v1.5': 8192,
+    'meta-llama/llama-3.1-405b-instruct': 4096,
+    'meta-llama/llama-3.1-70b-instruct': 4096,
+    'meta-llama/llama-3.1-8b-instruct': 4096,
+
     // Mistral models
-    'mistralai/voxtral-small-24b-2507': 8192,
+    'mistralai/mistral-large': 8192,
+    'mistralai/mixtral-8x7b-instruct': 4096,
+
     // DeepSeek models
-    'deepseek/deepseek-v3.2-exp': 8192,
-    'deepseek/deepseek-v3.1-terminus': 8192,
-    // Qwen models
-    'qwen/qwen3-max': 8192,
-    'qwen/qwen3-coder-plus': 8192,
-    'qwen/qwen3-next-80b-a3b-instruct': 8192,
-    'qwen/qwen-plus-2025-07-28': 8192,
+    'deepseek/deepseek-chat': 8192,
+    'deepseek/deepseek-r1': 8192,
   };
 
   // Return specific limit if known, otherwise default to 4000

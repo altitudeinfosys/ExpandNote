@@ -147,19 +147,7 @@ export async function POST(
     }
 
     // Decrypt API key using encryption library
-    console.log('Decrypting API key for provider:', provider, {
-      hasEncryptedKey: !!encryptedApiKey,
-      encryptedKeyLength: encryptedApiKey?.length,
-      encryptedKeyPrefix: encryptedApiKey?.substring(0, 20),
-    });
-
     const apiKey = await decryptApiKey(encryptedApiKey);
-
-    console.log('Decryption result:', {
-      success: !!apiKey,
-      decryptedLength: apiKey?.length,
-      decryptedPrefix: apiKey?.substring(0, 10),
-    });
 
     if (!apiKey) {
       return NextResponse.json(
