@@ -71,6 +71,15 @@ body {
   user-select: none;
 }
 
+/* Filled variant for Material Symbols (e.g., favorite star icons) */
+.material-symbols-outlined.fill {
+  font-variation-settings:
+    'FILL' 1,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
+}
+
 /* SimpleMDE Dark Mode Styles */
 .dark .markdown-editor .CodeMirror {
   background-color: #1f2937;

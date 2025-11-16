@@ -289,10 +289,14 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
 
           <button
             onClick={toggleFavorite}
-            className="p-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background)] rounded-lg transition-colors flex-shrink-0"
+            className={`p-2 rounded-lg transition-all flex-shrink-0 ${
+              isFavorite
+                ? 'text-yellow-500 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
+                : 'text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background)]'
+            }`}
             aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
           >
-            <span className={`material-symbols-outlined ${isFavorite ? 'text-yellow-500' : ''}`}>
+            <span className={`material-symbols-outlined ${isFavorite ? 'fill' : ''}`}>
               {isFavorite ? 'star' : 'star_border'}
             </span>
           </button>

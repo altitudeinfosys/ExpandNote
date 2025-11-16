@@ -59,17 +59,19 @@ export async function GET(request: NextRequest) {
       .eq('user_id', user.id);
 
     // Filter by trash status
+    // Note: trash and favorites filters are mutually exclusive (enforced client-side)
     if (showTrash) {
       // Show only deleted notes
       query = query.not('deleted_at', 'is', null);
     } else {
       // Show only non-deleted notes
       query = query.is('deleted_at', null);
-    }
 
-    // Apply filters
-    if (showFavorites) {
-      query = query.eq('is_favorite', true);
+      // Apply favorites filter only when not showing trash
+      // This prevents the confusing UX of "favorited trash items"
+      if (showFavorites) {
+        query = query.eq('is_favorite', true);
+      }
     }
 
     // Note: Tag filtering is handled client-side for now

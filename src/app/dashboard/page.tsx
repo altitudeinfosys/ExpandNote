@@ -13,10 +13,11 @@ import { SearchBar } from '@/components/SearchBar';
 const MOBILE_BREAKPOINT = 768;
 
 // View types
-type DashboardView = 'all-notes' | 'trash';
+type DashboardView = 'all-notes' | 'favorites' | 'trash';
 
 const DASHBOARD_VIEWS = {
   ALL_NOTES: 'all-notes' as const,
+  FAVORITES: 'favorites' as const,
   TRASH: 'trash' as const,
 };
 
@@ -66,12 +67,14 @@ export default function DashboardPage() {
     }
   }, [user, authLoading, router]);
 
-  // Fetch notes on mount
+  // Fetch notes on initial mount only
+  // View handlers control subsequent fetches explicitly to avoid double-fetching
   useEffect(() => {
     if (user && !authLoading) {
-      fetchNotes({ showTrash: currentView === DASHBOARD_VIEWS.TRASH });
+      fetchNotes(); // Initial fetch - no filters
     }
-  }, [user, authLoading, fetchNotes, currentView]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, authLoading]);
 
   // Show editor when note selected
   useEffect(() => {
@@ -115,7 +118,13 @@ export default function DashboardPage() {
   const handleCloseEditor = useCallback(() => {
     setSelectedNoteId(null);
     setShowEditor(false);
-  }, []);
+
+    // Refetch notes when closing editor in Favorites view
+    // This ensures unfavorited notes are removed from the list
+    if (currentView === DASHBOARD_VIEWS.FAVORITES) {
+      fetchNotes({ showFavorites: true });
+    }
+  }, [currentView, fetchNotes]);
 
   const handleSaveNote = useCallback(
     async (noteData: {
@@ -124,9 +133,29 @@ export default function DashboardPage() {
       is_favorite: boolean;
     }) => {
       if (!selectedNote) return;
+
+      // Check if favorite status changed
+      const favoriteChanged = noteData.is_favorite !== selectedNote.is_favorite;
+
       await updateNoteById(selectedNote.id, noteData);
+
+      // Refetch current view if favorite status changed
+      // This ensures the list stays in sync when toggling favorites
+      if (favoriteChanged) {
+        switch (currentView) {
+          case DASHBOARD_VIEWS.FAVORITES:
+            fetchNotes({ showFavorites: true });
+            break;
+          case DASHBOARD_VIEWS.TRASH:
+            fetchNotes({ showTrash: true });
+            break;
+          default:
+            fetchNotes();
+            break;
+        }
+      }
     },
-    [selectedNote, updateNoteById]
+    [selectedNote, updateNoteById, currentView, fetchNotes]
   );
 
   const handleDeleteNote = useCallback(
@@ -164,6 +193,12 @@ export default function DashboardPage() {
     setCurrentView(DASHBOARD_VIEWS.TRASH);
     clearTagSelection();
     fetchNotes({ showTrash: true });
+  }, [clearTagSelection, fetchNotes]);
+
+  const handleShowFavorites = useCallback(() => {
+    setCurrentView(DASHBOARD_VIEWS.FAVORITES);
+    clearTagSelection();
+    fetchNotes({ showFavorites: true });
   }, [clearTagSelection, fetchNotes]);
 
   // Mobile detection
@@ -292,6 +327,22 @@ export default function DashboardPage() {
           </button>
 
           <button
+            onClick={handleShowFavorites}
+            aria-label="View favorite notes"
+            aria-current={currentView === DASHBOARD_VIEWS.FAVORITES ? 'page' : undefined}
+            className={`
+              w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors
+              ${currentView === DASHBOARD_VIEWS.FAVORITES
+                ? 'bg-[var(--primary)] text-white'
+                : 'text-[var(--foreground)] hover:bg-[var(--background)]'
+              }
+            `}
+          >
+            <span className="material-symbols-outlined" aria-hidden="true">star</span>
+            <span className="font-medium">Favorites</span>
+          </button>
+
+          <button
             onClick={() => router.push('/settings?section=ai-profiles')}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[var(--foreground)] hover:bg-[var(--background)] transition-colors"
           >
@@ -383,7 +434,9 @@ export default function DashboardPage() {
           <div className="h-16 bg-[var(--background-surface)] border-b border-[var(--border)] px-6 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-4">
               <h1 className="text-xl font-semibold text-[var(--foreground)]">
-                {currentView === DASHBOARD_VIEWS.ALL_NOTES ? 'All Notes' : 'Trash'}
+                {currentView === DASHBOARD_VIEWS.ALL_NOTES && 'All Notes'}
+                {currentView === DASHBOARD_VIEWS.FAVORITES && 'Favorites'}
+                {currentView === DASHBOARD_VIEWS.TRASH && 'Trash'}
               </h1>
               <span className="text-sm text-[var(--foreground-secondary)]">
                 {notes.length} {notes.length === 1 ? 'note' : 'notes'}
@@ -425,7 +478,7 @@ export default function DashboardPage() {
             {/* Search Bar */}
             {currentView !== DASHBOARD_VIEWS.TRASH && (
               <div className="p-4 border-b border-[var(--border)]">
-                <SearchBar onSearch={handleSearch} />
+                <SearchBar key={currentView} onSearch={handleSearch} />
               </div>
             )}
 
