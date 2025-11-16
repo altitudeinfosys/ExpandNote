@@ -109,11 +109,14 @@ export async function executeOpenRouter(
     ];
 
     // Call OpenRouter Chat Completions API
+    // Use dynamic token limits based on model capabilities
+    const maxTokens = Math.min(4000, getOpenRouterMaxTokens(request.model));
+
     const completion = await client.chat.completions.create({
       model: request.model,
       messages,
       temperature: 0.7,
-      max_tokens: 4000, // Reasonable default for note content
+      max_tokens: maxTokens,
     });
 
     // Extract response content

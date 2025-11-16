@@ -1,6 +1,6 @@
 -- Add openrouter to ai_provider constraint in ai_profiles table
 ALTER TABLE ai_profiles
-  DROP CONSTRAINT ai_profiles_ai_provider_check;
+  DROP CONSTRAINT IF EXISTS ai_profiles_ai_provider_check;
 
 ALTER TABLE ai_profiles
   ADD CONSTRAINT ai_profiles_ai_provider_check
@@ -8,7 +8,7 @@ ALTER TABLE ai_profiles
 
 -- Add openrouter to default_ai_provider constraint in user_settings table
 ALTER TABLE user_settings
-  DROP CONSTRAINT user_settings_default_ai_provider_check;
+  DROP CONSTRAINT IF EXISTS user_settings_default_ai_provider_check;
 
 ALTER TABLE user_settings
   ADD CONSTRAINT user_settings_default_ai_provider_check
