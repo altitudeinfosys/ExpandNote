@@ -186,23 +186,20 @@ export default function DashboardPage() {
   const handleShowAllNotes = useCallback(() => {
     setCurrentView(DASHBOARD_VIEWS.ALL_NOTES);
     clearTagSelection();
-    handleSearch(''); // Clear search when switching views
     fetchNotes({ showTrash: false });
-  }, [clearTagSelection, fetchNotes, handleSearch]);
+  }, [clearTagSelection, fetchNotes]);
 
   const handleShowTrash = useCallback(() => {
     setCurrentView(DASHBOARD_VIEWS.TRASH);
     clearTagSelection();
-    handleSearch(''); // Clear search when switching views
     fetchNotes({ showTrash: true });
-  }, [clearTagSelection, fetchNotes, handleSearch]);
+  }, [clearTagSelection, fetchNotes]);
 
   const handleShowFavorites = useCallback(() => {
     setCurrentView(DASHBOARD_VIEWS.FAVORITES);
     clearTagSelection();
-    handleSearch(''); // Clear search when switching views
     fetchNotes({ showFavorites: true });
-  }, [clearTagSelection, fetchNotes, handleSearch]);
+  }, [clearTagSelection, fetchNotes]);
 
   // Mobile detection
   useEffect(() => {
@@ -481,7 +478,7 @@ export default function DashboardPage() {
             {/* Search Bar */}
             {currentView !== DASHBOARD_VIEWS.TRASH && (
               <div className="p-4 border-b border-[var(--border)]">
-                <SearchBar onSearch={handleSearch} />
+                <SearchBar key={currentView} onSearch={handleSearch} />
               </div>
             )}
 
