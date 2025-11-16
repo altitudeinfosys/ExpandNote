@@ -22,21 +22,24 @@ export function useNotes() {
   // AbortController ref to cancel in-flight search requests
   const searchAbortControllerRef = useRef<AbortController | null>(null);
 
+  // Define mutually exclusive filter options using discriminated union
+  // TypeScript will prevent both showTrash and showFavorites from being true simultaneously
+  type FetchNotesOptions =
+    | { showTrash: true; showFavorites?: never }
+    | { showTrash?: never; showFavorites: true }
+    | { showTrash?: never; showFavorites?: never }
+    | undefined;
+
   // Fetch all notes
-  const fetchNotes = useCallback(async (options?: { showTrash?: boolean; showFavorites?: boolean }) => {
+  const fetchNotes = useCallback(async (options?: FetchNotesOptions) => {
     setLoading(true);
     setError(null);
 
     try {
       const params = new URLSearchParams();
 
-      // Note: trash and favorites filters are mutually exclusive
+      // Note: trash and favorites filters are mutually exclusive (enforced by TypeScript types)
       // Priority: Trash > Favorites > All Notes
-      // This prevents confusing UX of "favorited trash items"
-      if (options?.showTrash && options?.showFavorites) {
-        console.warn('[useNotes] Cannot filter by both trash and favorites. Showing trash only.');
-      }
-
       if (options?.showTrash) {
         params.append('trash', 'true');
       } else if (options?.showFavorites) {

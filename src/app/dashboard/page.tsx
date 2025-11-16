@@ -67,12 +67,14 @@ export default function DashboardPage() {
     }
   }, [user, authLoading, router]);
 
-  // Fetch notes on mount
+  // Fetch notes on initial mount only
+  // View handlers control subsequent fetches explicitly to avoid double-fetching
   useEffect(() => {
     if (user && !authLoading) {
-      fetchNotes({ showTrash: currentView === DASHBOARD_VIEWS.TRASH });
+      fetchNotes(); // Initial fetch - no filters
     }
-  }, [user, authLoading, fetchNotes, currentView]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, authLoading]);
 
   // Show editor when note selected
   useEffect(() => {
@@ -131,9 +133,29 @@ export default function DashboardPage() {
       is_favorite: boolean;
     }) => {
       if (!selectedNote) return;
+
+      // Check if favorite status changed
+      const favoriteChanged = noteData.is_favorite !== selectedNote.is_favorite;
+
       await updateNoteById(selectedNote.id, noteData);
+
+      // Refetch current view if favorite status changed
+      // This ensures the list stays in sync when toggling favorites
+      if (favoriteChanged) {
+        switch (currentView) {
+          case DASHBOARD_VIEWS.FAVORITES:
+            fetchNotes({ showFavorites: true });
+            break;
+          case DASHBOARD_VIEWS.TRASH:
+            fetchNotes({ showTrash: true });
+            break;
+          default:
+            fetchNotes();
+            break;
+        }
+      }
     },
-    [selectedNote, updateNoteById]
+    [selectedNote, updateNoteById, currentView, fetchNotes]
   );
 
   const handleDeleteNote = useCallback(
@@ -164,20 +186,23 @@ export default function DashboardPage() {
   const handleShowAllNotes = useCallback(() => {
     setCurrentView(DASHBOARD_VIEWS.ALL_NOTES);
     clearTagSelection();
+    handleSearch(''); // Clear search when switching views
     fetchNotes({ showTrash: false });
-  }, [clearTagSelection, fetchNotes]);
+  }, [clearTagSelection, fetchNotes, handleSearch]);
 
   const handleShowTrash = useCallback(() => {
     setCurrentView(DASHBOARD_VIEWS.TRASH);
     clearTagSelection();
+    handleSearch(''); // Clear search when switching views
     fetchNotes({ showTrash: true });
-  }, [clearTagSelection, fetchNotes]);
+  }, [clearTagSelection, fetchNotes, handleSearch]);
 
   const handleShowFavorites = useCallback(() => {
     setCurrentView(DASHBOARD_VIEWS.FAVORITES);
     clearTagSelection();
+    handleSearch(''); // Clear search when switching views
     fetchNotes({ showFavorites: true });
-  }, [clearTagSelection, fetchNotes]);
+  }, [clearTagSelection, fetchNotes, handleSearch]);
 
   // Mobile detection
   useEffect(() => {
@@ -456,7 +481,7 @@ export default function DashboardPage() {
             {/* Search Bar */}
             {currentView !== DASHBOARD_VIEWS.TRASH && (
               <div className="p-4 border-b border-[var(--border)]">
-                <SearchBar key={currentView} onSearch={handleSearch} />
+                <SearchBar onSearch={handleSearch} />
               </div>
             )}
 

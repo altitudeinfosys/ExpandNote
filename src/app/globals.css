@@ -77,7 +77,7 @@ body {
     'FILL' 1,
     'wght' 400,
     'GRAD' 0,
-    'opsz' 24 !important;
+    'opsz' 24;
 }
 
 /* SimpleMDE Dark Mode Styles */
