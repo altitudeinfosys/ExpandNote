@@ -15,6 +15,7 @@ export function SearchBar({
   debounceMs = SEARCH_DEBOUNCE_MS,
 }: SearchBarProps) {
   const [query, setQuery] = useState('');
+  const isInitialMount = useRef(true);
 
   // Use ref to avoid re-creating effect when onSearch changes
   const onSearchRef = useRef(onSearch);
@@ -24,6 +25,12 @@ export function SearchBar({
 
   // Debounced search
   useEffect(() => {
+    // Skip the search on initial mount to prevent overwriting fetch calls
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
     const timer = setTimeout(() => {
       onSearchRef.current(query);
     }, debounceMs);
