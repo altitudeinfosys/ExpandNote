@@ -23,7 +23,7 @@ export function useNotes() {
   const searchAbortControllerRef = useRef<AbortController | null>(null);
 
   // Fetch all notes
-  const fetchNotes = useCallback(async (options?: { showTrash?: boolean }) => {
+  const fetchNotes = useCallback(async (options?: { showTrash?: boolean; showFavorites?: boolean }) => {
     setLoading(true);
     setError(null);
 
@@ -31,6 +31,9 @@ export function useNotes() {
       const params = new URLSearchParams();
       if (options?.showTrash) {
         params.append('trash', 'true');
+      }
+      if (options?.showFavorites) {
+        params.append('favorites', 'true');
       }
 
       const url = params.toString() ? `/api/notes?${params.toString()}` : '/api/notes';
