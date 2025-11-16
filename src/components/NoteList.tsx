@@ -104,7 +104,10 @@ function NoteListItem({ note, isSelected, onClick }: NoteListItemProps) {
           }`}
         >
           {note.is_favorite && (
-            <span className="material-symbols-outlined fill text-yellow-500 text-base inline mr-1.5 -mt-0.5">
+            <span
+              className="material-symbols-outlined fill text-yellow-500 text-base inline mr-1.5 -mt-0.5"
+              aria-hidden="true"
+            >
               star
             </span>
           )}

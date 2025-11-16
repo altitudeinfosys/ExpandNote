@@ -29,10 +29,18 @@ export function useNotes() {
 
     try {
       const params = new URLSearchParams();
+
+      // Note: trash and favorites filters are mutually exclusive
+      // Priority: Trash > Favorites > All Notes
+      // This prevents confusing UX of "favorited trash items"
+      if (options?.showTrash && options?.showFavorites) {
+        console.warn('[useNotes] Cannot filter by both trash and favorites. Showing trash only.');
+      }
+
       if (options?.showTrash) {
         params.append('trash', 'true');
-      }
-      if (options?.showFavorites) {
+      } else if (options?.showFavorites) {
+        // Only apply favorites filter if not showing trash
         params.append('favorites', 'true');
       }
 

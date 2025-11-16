@@ -116,7 +116,13 @@ export default function DashboardPage() {
   const handleCloseEditor = useCallback(() => {
     setSelectedNoteId(null);
     setShowEditor(false);
-  }, []);
+
+    // Refetch notes when closing editor in Favorites view
+    // This ensures unfavorited notes are removed from the list
+    if (currentView === DASHBOARD_VIEWS.FAVORITES) {
+      fetchNotes({ showFavorites: true });
+    }
+  }, [currentView, fetchNotes]);
 
   const handleSaveNote = useCallback(
     async (noteData: {
@@ -300,6 +306,8 @@ export default function DashboardPage() {
 
           <button
             onClick={handleShowFavorites}
+            aria-label="View favorite notes"
+            aria-current={currentView === DASHBOARD_VIEWS.FAVORITES ? 'page' : undefined}
             className={`
               w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors
               ${currentView === DASHBOARD_VIEWS.FAVORITES
@@ -308,7 +316,7 @@ export default function DashboardPage() {
               }
             `}
           >
-            <span className="material-symbols-outlined">star</span>
+            <span className="material-symbols-outlined" aria-hidden="true">star</span>
             <span className="font-medium">Favorites</span>
           </button>
 
@@ -448,7 +456,7 @@ export default function DashboardPage() {
             {/* Search Bar */}
             {currentView !== DASHBOARD_VIEWS.TRASH && (
               <div className="p-4 border-b border-[var(--border)]">
-                <SearchBar onSearch={handleSearch} />
+                <SearchBar key={currentView} onSearch={handleSearch} />
               </div>
             )}
 
