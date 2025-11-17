@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import { Note, Tag, AIProfile } from '@/types';
-import { MarkdownEditor } from './MarkdownEditor';
 import { TagSelector } from './TagSelector';
 import { formatDateTime } from '@/lib/utils/date';
 import { AUTO_SAVE_DELAY_MS } from '@/lib/constants';
@@ -275,19 +275,42 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
 
   // Copy note content to clipboard
   const handleCopy = useCallback(async () => {
+    // Check if Clipboard API is available
+    if (!navigator.clipboard) {
+      toast.error('Clipboard not available. Please use HTTPS or try Ctrl+C');
+      return;
+    }
+
     try {
       await navigator.clipboard.writeText(content);
       toast.success('Note content copied to clipboard');
     } catch (error) {
       console.error('Failed to copy:', error);
-      toast.error('Failed to copy content');
+      // Provide specific error messages based on error type
+      if (error instanceof DOMException && error.name === 'NotAllowedError') {
+        toast.error('Clipboard access denied. Please check browser permissions');
+      } else {
+        toast.error('Failed to copy content');
+      }
     }
   }, [content]);
 
   // Paste from clipboard and append at cursor position
   const handlePaste = useCallback(async () => {
+    // Check if Clipboard API is available
+    if (!navigator.clipboard || !navigator.clipboard.readText) {
+      toast.error('Clipboard not available. Please use HTTPS or try Ctrl+V');
+      return;
+    }
+
     try {
       const clipboardText = await navigator.clipboard.readText();
+
+      // Check for empty clipboard
+      if (!clipboardText) {
+        toast.error('Clipboard is empty');
+        return;
+      }
 
       if (!textareaRef.current) {
         // Fallback: append to end if ref not available
@@ -302,21 +325,26 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
       const textAfterCursor = content.substring(cursorPosition);
 
       const newContent = textBeforeCursor + clipboardText + textAfterCursor;
-      setContent(newContent);
 
-      // Set cursor position after pasted text
-      setTimeout(() => {
-        if (textareaRef.current) {
-          const newCursorPosition = cursorPosition + clipboardText.length;
-          textareaRef.current.setSelectionRange(newCursorPosition, newCursorPosition);
-          textareaRef.current.focus();
-        }
-      }, 0);
+      // Use flushSync to ensure DOM is updated before cursor positioning
+      flushSync(() => {
+        setContent(newContent);
+      });
+
+      // Now safely set cursor position after pasted text
+      const newCursorPosition = cursorPosition + clipboardText.length;
+      textarea.setSelectionRange(newCursorPosition, newCursorPosition);
+      textarea.focus();
 
       toast.success('Content pasted');
     } catch (error) {
       console.error('Failed to paste:', error);
-      toast.error('Failed to paste content');
+      // Provide specific error messages based on error type
+      if (error instanceof DOMException && error.name === 'NotAllowedError') {
+        toast.error('Clipboard access denied. Please check browser permissions');
+      } else {
+        toast.error('Failed to paste content');
+      }
     }
   }, [content]);
 
