@@ -167,7 +167,7 @@ export default function DashboardPage() {
         console.error('Failed to delete note:', error);
         alert('Failed to delete note. Please try again.');
       } finally {
-        await fetchNotes({ showTrash: currentView === DASHBOARD_VIEWS.TRASH });
+        await fetchNotes(currentView === DASHBOARD_VIEWS.TRASH ? { showTrash: true } : undefined);
       }
     },
     [deleteNoteById, fetchNotes, handleCloseEditor, currentView]
@@ -186,7 +186,7 @@ export default function DashboardPage() {
   const handleShowAllNotes = useCallback(() => {
     setCurrentView(DASHBOARD_VIEWS.ALL_NOTES);
     clearTagSelection();
-    fetchNotes({ showTrash: false });
+    fetchNotes();
   }, [clearTagSelection, fetchNotes]);
 
   const handleShowTrash = useCallback(() => {
