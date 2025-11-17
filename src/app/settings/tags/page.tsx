@@ -335,8 +335,29 @@ export default function TagManagementPage() {
 
       {/* Tag Form Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[var(--background-surface)] rounded-xl max-w-md w-full p-6 border border-[var(--border)]">
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            // Close modal when clicking backdrop
+            if (e.target === e.currentTarget && !saving) {
+              closeModal();
+            }
+          }}
+        >
+          <div
+            className="bg-[var(--background-surface)] rounded-xl max-w-md w-full p-6 border border-[var(--border)]"
+            onKeyDown={(e) => {
+              // Close modal on Escape key
+              if (e.key === 'Escape' && !saving) {
+                closeModal();
+              }
+              // Submit form on Enter key
+              if (e.key === 'Enter' && !saving && tagName.trim().length > 0) {
+                e.preventDefault();
+                handleSaveTag();
+              }
+            }}
+          >
             <h3 className="text-xl font-semibold text-[var(--foreground)] mb-4">
               {editingTag ? 'Edit Tag' : 'Create New Tag'}
             </h3>
@@ -415,8 +436,24 @@ export default function TagManagementPage() {
 
       {/* Delete Confirmation Dialog */}
       {deletingTag && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[var(--background-surface)] rounded-xl max-w-md w-full p-6 border border-[var(--border)]">
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            // Close dialog when clicking backdrop
+            if (e.target === e.currentTarget && !deleting) {
+              closeDeleteDialog();
+            }
+          }}
+        >
+          <div
+            className="bg-[var(--background-surface)] rounded-xl max-w-md w-full p-6 border border-[var(--border)]"
+            onKeyDown={(e) => {
+              // Close dialog on Escape key
+              if (e.key === 'Escape' && !deleting) {
+                closeDeleteDialog();
+              }
+            }}
+          >
             {/* Level 3: Critical Warning */}
             {deleteConfirmLevel === 3 ? (
               <>
