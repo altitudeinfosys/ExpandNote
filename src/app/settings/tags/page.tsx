@@ -118,11 +118,72 @@ export default function TagManagementPage() {
             </button>
           </div>
         ) : (
-          <div>
-            <p className="text-[var(--foreground)]">
-              Loaded {tags.length} tags
-            </p>
-            {/* Tag list will go here */}
+          <div className="bg-[var(--background-surface)] rounded-xl border border-[var(--border)] p-4 sm:p-6">
+            {/* Header with Create Button */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+              <h2 className="text-xl font-semibold text-[var(--foreground)]">Your Tags</h2>
+              <button
+                onClick={() => {/* Will implement in next task */}}
+                disabled={tags.length >= 100}
+                className="px-3 sm:px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 font-medium text-sm sm:text-base"
+              >
+                <span className="material-symbols-outlined text-lg sm:text-xl">add</span>
+                <span>Create New Tag</span>
+              </button>
+            </div>
+
+            {/* Tag List or Empty State */}
+            {tags.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-[var(--background)] rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="material-symbols-outlined text-[var(--foreground-secondary)] text-3xl">label</span>
+                </div>
+                <p className="text-[var(--foreground)] font-medium mb-2">No tags yet</p>
+                <p className="text-sm text-[var(--foreground-secondary)]">Create your first tag to organize your notes</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {tags.map((tag) => (
+                  <div
+                    key={tag.id}
+                    className="border border-[var(--border)] rounded-lg p-4 hover:bg-[var(--background)] transition-colors"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <span className="px-2 py-1 text-sm rounded-full bg-[var(--ai-purple)]/10 text-[var(--ai-purple)] font-medium">
+                            #{tag.name}
+                          </span>
+                          {tag.ai_profile_count > 0 && (
+                            <span className="text-xs text-[var(--foreground-secondary)] flex items-center gap-1">
+                              <span className="material-symbols-outlined text-sm">auto_awesome</span>
+                              <span>Linked to {tag.ai_profile_count} AI Profile{tag.ai_profile_count > 1 ? 's' : ''}</span>
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-sm text-[var(--foreground-secondary)]">
+                          Used in {tag.note_count} note{tag.note_count !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <button
+                          onClick={() => {/* Will implement in next task */}}
+                          className="px-3 py-1.5 text-sm text-primary hover:bg-primary/10 rounded-lg transition-colors font-medium"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => {/* Will implement in next task */}}
+                          className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors font-medium"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
