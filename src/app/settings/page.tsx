@@ -572,6 +572,22 @@ function SettingsContent() {
                         <option value="dark">Dark</option>
                       </select>
                     </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                        Manage Tags
+                      </label>
+                      <p className="text-sm text-[var(--foreground-secondary)] mb-3">
+                        View and organize all your tags
+                      </p>
+                      <button
+                        onClick={() => router.push('/settings/tags')}
+                        className="px-4 py-3 border border-[var(--border)] text-[var(--foreground)] rounded-lg hover:bg-[var(--background)] transition-colors flex items-center gap-2 font-medium"
+                      >
+                        <span className="material-symbols-outlined">label</span>
+                        <span>Manage Tags</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
