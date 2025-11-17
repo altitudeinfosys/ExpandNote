@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Note, Tag, AIProfile } from '@/types';
 import { MarkdownEditor } from './MarkdownEditor';
 import { TagSelector } from './TagSelector';
@@ -33,6 +33,9 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
   const [aiProfiles, setAiProfiles] = useState<AIProfile[]>([]);
   const [executingProfileId, setExecutingProfileId] = useState<string | null>(null);
   const [executedProfileIds, setExecutedProfileIds] = useState<Set<string>>(new Set());
+
+  // Ref for textarea to manage cursor position
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Reset state when note ID changes (not just when note object reference changes)
   useEffect(() => {
@@ -270,6 +273,53 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
     }
   }, [note, aiProfiles, executingProfileId]);
 
+  // Copy note content to clipboard
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(content);
+      toast.success('Note content copied to clipboard');
+    } catch (error) {
+      console.error('Failed to copy:', error);
+      toast.error('Failed to copy content');
+    }
+  }, [content]);
+
+  // Paste from clipboard and append at cursor position
+  const handlePaste = useCallback(async () => {
+    try {
+      const clipboardText = await navigator.clipboard.readText();
+
+      if (!textareaRef.current) {
+        // Fallback: append to end if ref not available
+        setContent(prev => prev + clipboardText);
+        toast.success('Content pasted');
+        return;
+      }
+
+      const textarea = textareaRef.current;
+      const cursorPosition = textarea.selectionStart || content.length;
+      const textBeforeCursor = content.substring(0, cursorPosition);
+      const textAfterCursor = content.substring(cursorPosition);
+
+      const newContent = textBeforeCursor + clipboardText + textAfterCursor;
+      setContent(newContent);
+
+      // Set cursor position after pasted text
+      setTimeout(() => {
+        if (textareaRef.current) {
+          const newCursorPosition = cursorPosition + clipboardText.length;
+          textareaRef.current.setSelectionRange(newCursorPosition, newCursorPosition);
+          textareaRef.current.focus();
+        }
+      }, 0);
+
+      toast.success('Content pasted');
+    } catch (error) {
+      console.error('Failed to paste:', error);
+      toast.error('Failed to paste content');
+    }
+  }, [content]);
+
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
       {/* Header */}
@@ -316,6 +366,27 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Copy Button */}
+          <button
+            onClick={handleCopy}
+            disabled={!content.trim()}
+            className="p-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background)] rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            aria-label="Copy note content"
+            title="Copy note content"
+          >
+            <span className="material-symbols-outlined text-lg">content_copy</span>
+          </button>
+
+          {/* Paste Button */}
+          <button
+            onClick={handlePaste}
+            className="p-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background)] rounded-lg transition-colors"
+            aria-label="Paste from clipboard"
+            title="Paste from clipboard"
+          >
+            <span className="material-symbols-outlined text-lg">content_paste</span>
+          </button>
+
           {note && onDelete && (
             <button
               onClick={handleDelete}
@@ -342,6 +413,7 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
       {/* Editor - Scrollable */}
       <div className="flex-1 overflow-auto px-4 py-3 bg-[var(--background)]">
         <textarea
+          ref={textareaRef}
           key={note?.id || 'new-note'}
           value={content}
           onChange={(e) => setContent(e.target.value)}
