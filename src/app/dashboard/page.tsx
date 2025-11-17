@@ -289,6 +289,16 @@ export default function DashboardPage() {
               </span>
             </button>
             <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="p-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background)] rounded-lg transition-colors disabled:opacity-50"
+              title="Refresh notes"
+            >
+              <span className={`material-symbols-outlined ${isRefreshing ? 'animate-spin' : ''}`}>
+                refresh
+              </span>
+            </button>
+            <button
               onClick={handleCreateNote}
               disabled={isCreatingNote}
               className="p-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
