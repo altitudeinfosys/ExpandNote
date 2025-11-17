@@ -17,7 +17,6 @@ export default function TagManagementPage() {
   const { theme: currentTheme, setTheme } = useTheme();
   const { user } = useAuth();
   const [tags, setTags] = useState<TagWithMetadata[]>([]);
-  const [aiProfiles, setAiProfiles] = useState<AIProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,7 +69,6 @@ export default function TagManagementPage() {
       );
 
       setTags(tagsWithMetadata);
-      setAiProfiles(profilesData);
     } catch (err) {
       console.error('Error fetching data:', err);
       setError('Failed to load tags. Please try again.');
@@ -154,7 +152,7 @@ export default function TagManagementPage() {
         throw new Error(errorData.error || 'Failed to save tag');
       }
 
-      const result = await response.json();
+      await response.json();
 
       // Update tags list optimistically
       if (editingTag) {
@@ -523,11 +521,7 @@ export default function TagManagementPage() {
               <button
                 onClick={handleDeleteTag}
                 disabled={deleting}
-                className={`px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 ${
-                  deleteConfirmLevel === 3
-                    ? 'bg-red-600 text-white hover:bg-red-700'
-                    : 'bg-red-600 text-white hover:bg-red-700'
-                }`}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
               >
                 {deleting ? (
                   <>
