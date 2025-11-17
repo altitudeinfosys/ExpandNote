@@ -21,6 +21,13 @@ export default function TagManagementPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTag, setEditingTag] = useState<Tag | null>(null);
+  const [tagName, setTagName] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -73,6 +80,94 @@ export default function TagManagementPage() {
     }
   }, [user, fetchData]);
 
+  // Modal handlers
+  const openCreateModal = () => {
+    setEditingTag(null);
+    setTagName('');
+    setFormError(null);
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (tag: Tag) => {
+    setEditingTag(tag);
+    setTagName(tag.name);
+    setFormError(null);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingTag(null);
+    setTagName('');
+    setFormError(null);
+  };
+
+  // Validation
+  const validateTagName = (name: string): string | null => {
+    const trimmed = name.trim();
+    if (trimmed.length === 0) {
+      return 'Tag name is required';
+    }
+    if (trimmed.length > 50) {
+      return 'Tag name must be 50 characters or less';
+    }
+    // Check for duplicates (exclude current tag if editing)
+    const duplicate = tags.find(t =>
+      t.name.toLowerCase() === trimmed.toLowerCase() &&
+      t.id !== editingTag?.id
+    );
+    if (duplicate) {
+      return 'A tag with this name already exists';
+    }
+    return null;
+  };
+
+  // Save handler
+  const handleSaveTag = async () => {
+    const error = validateTagName(tagName);
+    if (error) {
+      setFormError(error);
+      return;
+    }
+
+    setSaving(true);
+    setFormError(null);
+
+    try {
+      const trimmed = tagName.trim();
+      const url = editingTag ? `/api/tags/${editingTag.id}` : '/api/tags';
+      const method = editingTag ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: trimmed })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save tag');
+      }
+
+      const result = await response.json();
+
+      // Update tags list optimistically
+      if (editingTag) {
+        setTags(tags.map(t => t.id === editingTag.id ? { ...t, name: trimmed } : t));
+      } else {
+        // For new tags, we need to fetch to get full metadata
+        await fetchData();
+      }
+
+      closeModal();
+    } catch (err) {
+      console.error('Error saving tag:', err);
+      setFormError(err instanceof Error ? err.message : 'Failed to save tag');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[var(--background)] overflow-x-hidden">
       {/* Header */}
@@ -123,7 +218,7 @@ export default function TagManagementPage() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
               <h2 className="text-xl font-semibold text-[var(--foreground)]">Your Tags</h2>
               <button
-                onClick={() => {/* Will implement in next task */}}
+                onClick={openCreateModal}
                 disabled={tags.length >= 100}
                 className="px-3 sm:px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 font-medium text-sm sm:text-base"
               >
@@ -167,7 +262,7 @@ export default function TagManagementPage() {
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <button
-                          onClick={() => {/* Will implement in next task */}}
+                          onClick={() => openEditModal(tag)}
                           className="px-3 py-1.5 text-sm text-primary hover:bg-primary/10 rounded-lg transition-colors font-medium"
                         >
                           Edit
@@ -187,6 +282,86 @@ export default function TagManagementPage() {
           </div>
         )}
       </div>
+
+      {/* Tag Form Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[var(--background-surface)] rounded-xl max-w-md w-full p-6 border border-[var(--border)]">
+            <h3 className="text-xl font-semibold text-[var(--foreground)] mb-4">
+              {editingTag ? 'Edit Tag' : 'Create New Tag'}
+            </h3>
+
+            {/* Warning for AI Profile link */}
+            {editingTag && (() => {
+              const currentTag = tags.find(t => t.id === editingTag.id);
+              return currentTag && currentTag.ai_profile_count > 0 ? (
+                <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg flex items-start gap-2">
+                  <span className="material-symbols-outlined text-yellow-600 dark:text-yellow-400 text-sm">warning</span>
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    This tag is used by{' '}
+                    <strong>
+                      {currentTag.ai_profile_names.join(', ')}
+                    </strong>
+                    . Renaming will affect automation.
+                  </p>
+                </div>
+              ) : null;
+            })()}
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                Tag Name
+              </label>
+              <input
+                type="text"
+                value={tagName}
+                onChange={(e) => {
+                  setTagName(e.target.value);
+                  setFormError(null);
+                }}
+                placeholder="e.g., work, personal, ideas"
+                maxLength={50}
+                className="w-full px-4 py-3 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--foreground)] focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                autoFocus
+              />
+              <div className="flex justify-between items-center mt-1">
+                <p className="text-xs text-[var(--foreground-secondary)]">
+                  {tagName.length}/50 characters
+                </p>
+              </div>
+              {formError && (
+                <p className="text-sm text-red-600 dark:text-red-400 mt-2">
+                  {formError}
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={closeModal}
+                disabled={saving}
+                className="px-4 py-2 border border-[var(--border)] text-[var(--foreground)] rounded-lg hover:bg-[var(--background)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveTag}
+                disabled={saving || tagName.trim().length === 0}
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              >
+                {saving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <span>{editingTag ? 'Save Changes' : 'Create Tag'}</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
