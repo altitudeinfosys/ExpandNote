@@ -28,6 +28,11 @@ export default function TagManagementPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Delete state
+  const [deletingTag, setDeletingTag] = useState<TagWithMetadata | null>(null);
+  const [deleteConfirmLevel, setDeleteConfirmLevel] = useState<1 | 2 | 3>(1);
+  const [deleting, setDeleting] = useState(false);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -168,6 +173,51 @@ export default function TagManagementPage() {
     }
   };
 
+  // Delete handlers
+  const openDeleteDialog = (tag: TagWithMetadata) => {
+    setDeletingTag(tag);
+
+    // Determine confirmation level
+    if (tag.ai_profile_count > 0) {
+      setDeleteConfirmLevel(3); // Critical - has AI Profile
+    } else if (tag.note_count > 0) {
+      setDeleteConfirmLevel(2); // Moderate - has notes
+    } else {
+      setDeleteConfirmLevel(1); // Basic - no dependencies
+    }
+  };
+
+  const closeDeleteDialog = () => {
+    setDeletingTag(null);
+    setDeleting(false);
+  };
+
+  const handleDeleteTag = async () => {
+    if (!deletingTag) return;
+
+    setDeleting(true);
+
+    try {
+      const response = await fetch(`/api/tags/${deletingTag.id}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete tag');
+      }
+
+      // Remove from list optimistically
+      setTags(tags.filter(t => t.id !== deletingTag.id));
+      closeDeleteDialog();
+    } catch (err) {
+      console.error('Error deleting tag:', err);
+      alert(err instanceof Error ? err.message : 'Failed to delete tag');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[var(--background)] overflow-x-hidden">
       {/* Header */}
@@ -268,7 +318,7 @@ export default function TagManagementPage() {
                           Edit
                         </button>
                         <button
-                          onClick={() => {/* Will implement in next task */}}
+                          onClick={() => openDeleteDialog(tag)}
                           className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors font-medium"
                         >
                           Delete
@@ -356,6 +406,99 @@ export default function TagManagementPage() {
                   </>
                 ) : (
                   <span>{editingTag ? 'Save Changes' : 'Create Tag'}</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deletingTag && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[var(--background-surface)] rounded-xl max-w-md w-full p-6 border border-[var(--border)]">
+            {/* Level 3: Critical Warning */}
+            {deleteConfirmLevel === 3 ? (
+              <>
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="material-symbols-outlined text-yellow-600 dark:text-yellow-400 text-2xl">warning</span>
+                  <h3 className="text-xl font-semibold text-[var(--foreground)]">
+                    Warning: AI Profile Dependency
+                  </h3>
+                </div>
+                <div className="mb-6 space-y-3">
+                  <p className="text-[var(--foreground)]">
+                    This tag is linked to the AI Profile{deletingTag.ai_profile_count > 1 ? 's' : ''}:
+                  </p>
+                  <div className="bg-[var(--background)] p-3 rounded-lg">
+                    <ul className="list-disc list-inside space-y-1">
+                      {deletingTag.ai_profile_names.map((name, i) => (
+                        <li key={i} className="text-[var(--foreground)] font-medium">{name}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <p className="text-[var(--foreground-secondary)]">
+                    Deleting this tag will break {deletingTag.ai_profile_count > 1 ? 'these automations' : 'this automation'}.
+                  </p>
+                  <p className="text-[var(--foreground)] font-medium">
+                    Are you absolutely sure you want to delete <strong>#{deletingTag.name}</strong>?
+                  </p>
+                </div>
+              </>
+            ) : deleteConfirmLevel === 2 ? (
+              /* Level 2: Moderate Warning */
+              <>
+                <h3 className="text-xl font-semibold text-[var(--foreground)] mb-4">
+                  Delete Tag?
+                </h3>
+                <div className="mb-6 space-y-3">
+                  <p className="text-[var(--foreground)]">
+                    This tag is used in <strong>{deletingTag.note_count} note{deletingTag.note_count > 1 ? 's' : ''}</strong>.
+                  </p>
+                  <p className="text-[var(--foreground-secondary)]">
+                    Deleting it will remove the tag from all notes.
+                  </p>
+                  <p className="text-[var(--foreground)]">
+                    Are you sure you want to delete <strong>#{deletingTag.name}</strong>?
+                  </p>
+                </div>
+              </>
+            ) : (
+              /* Level 1: Basic Confirmation */
+              <>
+                <h3 className="text-xl font-semibold text-[var(--foreground)] mb-4">
+                  Delete Tag?
+                </h3>
+                <p className="text-[var(--foreground)] mb-6">
+                  Are you sure you want to delete <strong>#{deletingTag.name}</strong>?
+                </p>
+              </>
+            )}
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={closeDeleteDialog}
+                disabled={deleting}
+                className="px-4 py-2 border border-[var(--border)] text-[var(--foreground)] rounded-lg hover:bg-[var(--background)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteTag}
+                disabled={deleting}
+                className={`px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 ${
+                  deleteConfirmLevel === 3
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'bg-red-600 text-white hover:bg-red-700'
+                }`}
+              >
+                {deleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <span>{deleteConfirmLevel === 3 ? 'Delete Anyway' : 'Delete'}</span>
                 )}
               </button>
             </div>
