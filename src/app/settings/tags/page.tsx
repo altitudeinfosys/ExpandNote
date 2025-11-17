@@ -31,7 +31,19 @@ export default function TagManagementPage() {
   const [deletingTag, setDeletingTag] = useState<TagWithMetadata | null>(null);
   const [deleteConfirmLevel, setDeleteConfirmLevel] = useState<1 | 2 | 3>(1);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  /**
+   * Fetches tags and their metadata (note counts, AI profile links).
+   *
+   * NOTE: This currently uses an N+1 query pattern (fetching each tag's
+   * note count individually). This is acceptable for Phase 1 with max 100
+   * tags but should be optimized in the future by enhancing the GET /api/tags
+   * endpoint to include note counts in a single query using SQL JOIN/GROUP BY.
+   *
+   * Future optimization: Combine all tag metadata into a single database query
+   * to reduce API calls from O(n) to O(1).
+   */
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -188,12 +200,14 @@ export default function TagManagementPage() {
   const closeDeleteDialog = () => {
     setDeletingTag(null);
     setDeleting(false);
+    setDeleteError(null);
   };
 
   const handleDeleteTag = async () => {
     if (!deletingTag) return;
 
     setDeleting(true);
+    setDeleteError(null);
 
     try {
       const response = await fetch(`/api/tags/${deletingTag.id}`, {
@@ -210,7 +224,7 @@ export default function TagManagementPage() {
       closeDeleteDialog();
     } catch (err) {
       console.error('Error deleting tag:', err);
-      alert(err instanceof Error ? err.message : 'Failed to delete tag');
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete tag');
     } finally {
       setDeleting(false);
     }
@@ -223,7 +237,7 @@ export default function TagManagementPage() {
         <div className="w-full px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => router.push('/settings?section=app-settings')}
+              onClick={() => router.push('/settings')}
               className="p-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background)] rounded-lg transition-colors"
             >
               <span className="material-symbols-outlined">arrow_back</span>
@@ -508,6 +522,13 @@ export default function TagManagementPage() {
                   Are you sure you want to delete <strong>#{deletingTag.name}</strong>?
                 </p>
               </>
+            )}
+
+            {/* Error Display */}
+            {deleteError && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-400">{deleteError}</p>
+              </div>
             )}
 
             <div className="flex gap-3 justify-end">
