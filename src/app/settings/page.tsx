@@ -542,26 +542,6 @@ function SettingsContent() {
                 <div>
                   <h2 className="text-xl font-semibold text-[var(--foreground)] mb-6">App Settings</h2>
                   <div className="space-y-6">
-                    <div className="flex items-center justify-between py-4 border-b border-[var(--border)]">
-                      <div>
-                        <label className="font-medium text-[var(--foreground)]">Enable Auto-tagging</label>
-                        <p className="text-sm text-[var(--foreground-secondary)] mt-1">AI suggests tags for new notes</p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={settings?.enable_auto_tagging ?? true}
-                        onChange={(e) => {
-                          const newValue = e.target.checked;
-                          fetch('/api/settings', {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ enable_auto_tagging: newValue }),
-                          }).then(() => fetchSettings());
-                        }}
-                        className="w-5 h-5"
-                      />
-                    </div>
-
                     <div>
                       <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
                         Default Sort
