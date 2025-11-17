@@ -41,13 +41,13 @@ function SettingsContent() {
   const [profiles, setProfiles] = useState<AIProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeSection, setActiveSection] = useState<'account' | 'ai-config' | 'ai-profiles' | 'app-settings'>('account');
+  const [activeSection, setActiveSection] = useState<'account' | 'ai-config' | 'ai-profiles' | 'tags' | 'app-settings'>('account');
 
   // Handle section from URL query parameter
   useEffect(() => {
     const section = searchParams.get('section');
-    if (section && ['account', 'ai-config', 'ai-profiles', 'app-settings'].includes(section)) {
-      setActiveSection(section as 'account' | 'ai-config' | 'ai-profiles' | 'app-settings');
+    if (section && ['account', 'ai-config', 'ai-profiles', 'tags', 'app-settings'].includes(section)) {
+      setActiveSection(section as 'account' | 'ai-config' | 'ai-profiles' | 'tags' | 'app-settings');
     }
   }, [searchParams]);
 
@@ -268,6 +268,19 @@ function SettingsContent() {
                   >
                     <span className="material-symbols-outlined text-lg sm:text-xl">auto_awesome</span>
                     <span className="font-medium text-sm sm:text-base">AI Profiles ({profiles.length})</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => setActiveSection('tags')}
+                    className={`w-full text-left px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-colors flex items-center gap-2 sm:gap-3 ${
+                      activeSection === 'tags'
+                        ? 'bg-primary text-white'
+                        : 'text-[var(--foreground)] hover:bg-[var(--background)]'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-lg sm:text-xl">label</span>
+                    <span className="font-medium text-sm sm:text-base">Tags</span>
                   </button>
                 </li>
                 <li>
@@ -503,31 +516,32 @@ function SettingsContent() {
                 </div>
               )}
 
+              {/* Tags Section */}
+              {activeSection === 'tags' && (
+                <div>
+                  <h2 className="text-xl font-semibold text-[var(--foreground)] mb-6">Tag Management</h2>
+                  <div className="space-y-6">
+                    <div>
+                      <p className="text-[var(--foreground-secondary)] mb-6">
+                        Manage all your tags in one place. View usage statistics, create new tags, edit existing ones, or delete tags you no longer need.
+                      </p>
+                      <button
+                        onClick={() => router.push('/settings/tags')}
+                        className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors flex items-center gap-2 font-medium"
+                      >
+                        <span className="material-symbols-outlined">label</span>
+                        <span>Manage Tags</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* App Settings Section */}
               {activeSection === 'app-settings' && (
                 <div>
                   <h2 className="text-xl font-semibold text-[var(--foreground)] mb-6">App Settings</h2>
                   <div className="space-y-6">
-                    <div className="flex items-center justify-between py-4 border-b border-[var(--border)]">
-                      <div>
-                        <label className="font-medium text-[var(--foreground)]">Enable Auto-tagging</label>
-                        <p className="text-sm text-[var(--foreground-secondary)] mt-1">AI suggests tags for new notes</p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={settings?.enable_auto_tagging ?? true}
-                        onChange={(e) => {
-                          const newValue = e.target.checked;
-                          fetch('/api/settings', {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ enable_auto_tagging: newValue }),
-                          }).then(() => fetchSettings());
-                        }}
-                        className="w-5 h-5"
-                      />
-                    </div>
-
                     <div>
                       <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
                         Default Sort

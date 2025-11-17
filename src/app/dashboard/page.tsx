@@ -59,6 +59,7 @@ export default function DashboardPage() {
   const [currentView, setCurrentView] = useState<DashboardView>(DASHBOARD_VIEWS.ALL_NOTES);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -105,6 +106,17 @@ export default function DashboardPage() {
       setIsCreatingNote(false);
     }
   }, [createNote, isMobile]);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await fetchNotes(currentView === DASHBOARD_VIEWS.TRASH ? { showTrash: true } : undefined);
+    } catch (error) {
+      console.error('Failed to refresh notes:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [fetchNotes, currentView]);
 
   const handleSelectNote = useCallback(
     (noteId: string) => {
@@ -450,6 +462,16 @@ export default function DashboardPage() {
               >
                 <span className="material-symbols-outlined text-xl">
                   {theme === 'dark' ? 'light_mode' : 'dark_mode'}
+                </span>
+              </button>
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="p-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background)] rounded-lg transition-colors disabled:opacity-50"
+                title="Refresh notes"
+              >
+                <span className={`material-symbols-outlined text-xl ${isRefreshing ? 'animate-spin' : ''}`}>
+                  refresh
                 </span>
               </button>
               <button
