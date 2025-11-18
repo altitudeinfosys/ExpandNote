@@ -390,7 +390,12 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
             {!isSaving && !hasUnsavedChanges && lastSaved && (
               <>
                 {/* Mobile: Show checkmark icon */}
-                <span className="material-symbols-outlined text-green-600 dark:text-green-500 text-lg md:hidden flex-shrink-0" title="Saved">
+                <span
+                  className="material-symbols-outlined text-green-700 dark:text-green-400 text-lg md:hidden flex-shrink-0"
+                  title="Saved"
+                  role="status"
+                  aria-label="Note saved successfully"
+                >
                   check_circle
                 </span>
                 {/* Desktop: Show full timestamp */}
