@@ -383,12 +383,24 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
             {isSaving && (
               <>
                 <div className="animate-spin rounded-full h-3 w-3 md:h-4 md:w-4 border-b-2 border-[var(--primary)] flex-shrink-0"></div>
-                <span className="hidden sm:inline">Saving...</span>
+                <span className="hidden md:inline">Saving...</span>
               </>
             )}
-            {!isSaving && hasUnsavedChanges && <span className="hidden sm:inline">Unsaved changes</span>}
+            {!isSaving && hasUnsavedChanges && <span className="hidden md:inline">Unsaved changes</span>}
             {!isSaving && !hasUnsavedChanges && lastSaved && (
-              <span className="truncate">{formatDateTime(lastSaved)}</span>
+              <>
+                {/* Mobile: Show checkmark icon */}
+                <span
+                  className="material-symbols-outlined text-green-700 dark:text-green-400 text-lg md:hidden flex-shrink-0"
+                  title="Saved"
+                  role="status"
+                  aria-label="Note saved successfully"
+                >
+                  check_circle
+                </span>
+                {/* Desktop: Show full timestamp */}
+                <span className="truncate hidden md:inline">{formatDateTime(lastSaved)}</span>
+              </>
             )}
           </div>
         </div>
