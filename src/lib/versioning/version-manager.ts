@@ -1,0 +1,84 @@
+import { createClient } from '@/lib/supabase/client';
+import { CreateVersionParams, NoteVersion } from '@/types/version';
+
+/**
+ * Creates a new version snapshot of a note
+ */
+export async function createVersion(
+  params: CreateVersionParams
+): Promise<NoteVersion> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('note_versions')
+    .insert({
+      note_id: params.noteId,
+      user_id: params.userId,
+      title: params.title,
+      content: params.content,
+      tags: params.tags,
+      snapshot_trigger: params.trigger,
+      ai_profile_id: params.aiProfileId || null,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to create version:', error);
+    throw new Error(`Failed to create version: ${error.message}`);
+  }
+
+  return data;
+}
+
+/**
+ * Determines if a new version should be created based on trigger type and content changes
+ */
+export function shouldCreateVersion(
+  currentContent: string,
+  previousContent: string | null,
+  trigger: 'auto_save' | 'manual' | 'before_ai' | 'after_ai',
+  saveCount: number
+): boolean {
+  // Always create for manual triggers
+  if (trigger === 'manual') return true;
+
+  // Always create for AI triggers
+  if (trigger === 'before_ai' || trigger === 'after_ai') return true;
+
+  // Don't create if content is identical
+  if (currentContent === previousContent) return false;
+
+  // For auto_save, create every 5th save
+  if (trigger === 'auto_save' && saveCount % 5 === 0) return true;
+
+  // Check if content changed significantly (>100 chars difference)
+  const contentDiff = Math.abs(
+    currentContent.length - (previousContent?.length || 0)
+  );
+  if (contentDiff > 100) return true;
+
+  return false;
+}
+
+/**
+ * Gets the last saved content for comparison
+ */
+export async function getLastVersionContent(noteId: string): Promise<string | null> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('note_versions')
+    .select('content')
+    .eq('note_id', noteId)
+    .order('version_number', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Failed to get last version:', error);
+    return null;
+  }
+
+  return data?.content || null;
+}
