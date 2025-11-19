@@ -36,6 +36,7 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
   const [executedProfileIds, setExecutedProfileIds] = useState<Set<string>>(new Set());
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
+  const [saveCount, setSaveCount] = useState(0);
 
   // Ref for textarea to manage cursor position
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -110,12 +111,27 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
       });
       setLastSaved(new Date());
       setHasUnsavedChanges(false);
+
+      // Increment save counter
+      const newSaveCount = saveCount + 1;
+      setSaveCount(newSaveCount);
+
+      // Create version every 5th save
+      if (note && newSaveCount % 5 === 0) {
+        await fetch(`/api/notes/${note.id}/versions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ trigger: 'auto_save' }),
+        });
+      }
     } catch (error) {
       console.error('Failed to save note:', error);
     } finally {
       setIsSaving(false);
     }
-  }, [title, content, isFavorite, onSave]);
+  }, [title, content, isFavorite, onSave, note, saveCount]);
 
   // Auto-save after delay
   useEffect(() => {
