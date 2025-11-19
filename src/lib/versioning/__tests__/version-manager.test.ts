@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { createVersion, shouldCreateVersion } from '../version-manager';
+import { createVersion, shouldCreateVersion, getVersions } from '../version-manager';
 import { createClient } from '@supabase/supabase-js';
 
 // Mock Supabase
@@ -80,6 +80,24 @@ describe('version-manager', () => {
         1
       );
       expect(result).toBe(true);
+    });
+  });
+
+  describe('getVersions', () => {
+    it('should get all versions for a note', async () => {
+      const versions = await getVersions('note-1');
+
+      expect(Array.isArray(versions)).toBe(true);
+    });
+
+    it('should return versions in descending order', async () => {
+      const versions = await getVersions('note-1');
+
+      if (versions.length > 1) {
+        expect(versions[0].version_number).toBeGreaterThan(
+          versions[1].version_number
+        );
+      }
     });
   });
 });

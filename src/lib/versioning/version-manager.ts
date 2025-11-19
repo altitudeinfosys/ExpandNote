@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client';
-import { CreateVersionParams, NoteVersion } from '@/types/version';
+import { CreateVersionParams, NoteVersion, VersionListItem } from '@/types/version';
 
 /**
  * Creates a new version snapshot of a note
@@ -81,4 +81,44 @@ export async function getLastVersionContent(noteId: string): Promise<string | nu
   }
 
   return data?.content || null;
+}
+
+/**
+ * Gets all versions for a note (ordered newest first)
+ */
+export async function getVersions(noteId: string): Promise<VersionListItem[]> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('note_versions')
+    .select('id, version_number, created_at, snapshot_trigger, content_size, ai_profile_id')
+    .eq('note_id', noteId)
+    .order('version_number', { ascending: false });
+
+  if (error) {
+    console.error('Failed to get versions:', error);
+    throw new Error(`Failed to get versions: ${error.message}`);
+  }
+
+  return data || [];
+}
+
+/**
+ * Gets a specific version by ID
+ */
+export async function getVersion(versionId: string): Promise<NoteVersion | null> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('note_versions')
+    .select('*')
+    .eq('id', versionId)
+    .single();
+
+  if (error) {
+    console.error('Failed to get version:', error);
+    return null;
+  }
+
+  return data;
 }
