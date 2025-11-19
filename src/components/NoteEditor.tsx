@@ -232,6 +232,18 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
     const profileName = profile?.name || 'AI Profile';
 
     try {
+      // Create version BEFORE AI execution
+      await fetch(`/api/notes/${note.id}/versions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          trigger: 'before_ai',
+          aiProfileId: profileId
+        }),
+      });
+
       const response = await fetch(`/api/ai-profiles/${profileId}/execute`, {
         method: 'POST',
         headers: {
@@ -248,6 +260,18 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
       }
 
       const result = await response.json();
+
+      // Create version AFTER AI execution
+      await fetch(`/api/notes/${note.id}/versions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          trigger: 'after_ai',
+          aiProfileId: profileId
+        }),
+      });
 
       // Show success message
       toast.success(`${profileName} executed successfully`);
