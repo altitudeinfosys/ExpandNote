@@ -35,7 +35,7 @@ export async function GET(
     }
 
     // Get versions
-    const versions = await getVersions(id);
+    const versions = await getVersions(supabase, id);
 
     return NextResponse.json(versions);
   } catch (error) {
@@ -81,7 +81,7 @@ export async function POST(
     const tags = note.note_tags?.map((nt: { tag: { id: string; name: string } }) => nt.tag) || [];
 
     // Create version
-    const version = await createVersion({
+    const version = await createVersion(supabase, {
       noteId: note.id,
       userId: user.id,
       title: note.title,

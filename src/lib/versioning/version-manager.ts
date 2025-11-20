@@ -1,13 +1,13 @@
-import { createClient } from '@/lib/supabase/client';
 import { CreateVersionParams, NoteVersion, VersionListItem } from '@/types/version';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * Creates a new version snapshot of a note
  */
 export async function createVersion(
+  supabase: SupabaseClient,
   params: CreateVersionParams
 ): Promise<NoteVersion> {
-  const supabase = createClient();
 
   const { data, error } = await supabase
     .from('note_versions')
@@ -64,8 +64,7 @@ export function shouldCreateVersion(
 /**
  * Gets the last saved content for comparison
  */
-export async function getLastVersionContent(noteId: string): Promise<string | null> {
-  const supabase = createClient();
+export async function getLastVersionContent(supabase: SupabaseClient, noteId: string): Promise<string | null> {
 
   const { data, error } = await supabase
     .from('note_versions')
@@ -86,8 +85,7 @@ export async function getLastVersionContent(noteId: string): Promise<string | nu
 /**
  * Gets all versions for a note (ordered newest first)
  */
-export async function getVersions(noteId: string): Promise<VersionListItem[]> {
-  const supabase = createClient();
+export async function getVersions(supabase: SupabaseClient, noteId: string): Promise<VersionListItem[]> {
 
   const { data, error } = await supabase
     .from('note_versions')
@@ -106,8 +104,7 @@ export async function getVersions(noteId: string): Promise<VersionListItem[]> {
 /**
  * Gets a specific version by ID
  */
-export async function getVersion(versionId: string): Promise<NoteVersion | null> {
-  const supabase = createClient();
+export async function getVersion(supabase: SupabaseClient, versionId: string): Promise<NoteVersion | null> {
 
   const { data, error } = await supabase
     .from('note_versions')

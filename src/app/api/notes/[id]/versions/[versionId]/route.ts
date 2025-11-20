@@ -24,7 +24,7 @@ export async function GET(
     }
 
     // Get version
-    const version = await getVersion(versionId);
+    const version = await getVersion(supabase, versionId);
 
     if (!version) {
       return NextResponse.json({ error: 'Version not found' }, { status: 404 });
