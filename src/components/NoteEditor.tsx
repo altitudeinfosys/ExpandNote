@@ -7,6 +7,7 @@ import { TagSelector } from './TagSelector';
 import { formatDateTime } from '@/lib/utils/date';
 import { AUTO_SAVE_DELAY_MS } from '@/lib/constants';
 import toast from 'react-hot-toast';
+import { VersionHistory, VersionPreview } from './VersionHistory';
 interface NoteEditorProps {
   note: Note | null;
   onSave: (noteData: {
@@ -33,6 +34,8 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
   const [aiProfiles, setAiProfiles] = useState<AIProfile[]>([]);
   const [executingProfileId, setExecutingProfileId] = useState<string | null>(null);
   const [executedProfileIds, setExecutedProfileIds] = useState<Set<string>>(new Set());
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
 
   // Ref for textarea to manage cursor position
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -229,6 +232,18 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
     const profileName = profile?.name || 'AI Profile';
 
     try {
+      // Create version BEFORE AI execution
+      await fetch(`/api/notes/${note.id}/versions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          trigger: 'before_ai',
+          aiProfileId: profileId
+        }),
+      });
+
       const response = await fetch(`/api/ai-profiles/${profileId}/execute`, {
         method: 'POST',
         headers: {
@@ -245,6 +260,18 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
       }
 
       const result = await response.json();
+
+      // Create version AFTER AI execution
+      await fetch(`/api/notes/${note.id}/versions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          trigger: 'after_ai',
+          aiProfileId: profileId
+        }),
+      });
 
       // Show success message
       toast.success(`${profileName} executed successfully`);
@@ -348,6 +375,63 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
     }
   }, [content]);
 
+  // View a specific version
+  const handleViewVersion = useCallback((versionId: string) => {
+    setSelectedVersionId(versionId);
+  }, []);
+
+  // Restore a version
+  const handleRestoreVersion = useCallback(async (versionId: string) => {
+    if (!note) return;
+
+    const confirmed = confirm('Are you sure you want to restore this version? Your current changes will be saved as a new version.');
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/notes/${note.id}/versions/${versionId}/restore`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to restore version');
+      }
+
+      toast.success('Version restored successfully');
+      setSelectedVersionId(null);
+      setShowVersionHistory(false);
+
+      // Reload the page to show restored content
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to restore version:', error);
+      toast.error('Failed to restore version');
+    }
+  }, [note]);
+
+  // Create a manual version
+  const handleCreateManualVersion = useCallback(async () => {
+    if (!note) return;
+
+    try {
+      const response = await fetch(`/api/notes/${note.id}/versions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ trigger: 'manual' }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create version');
+      }
+
+      toast.success('Version saved');
+    } catch (error) {
+      console.error('Failed to create version:', error);
+      toast.error('Failed to save version');
+    }
+  }, [note]);
+
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
       {/* Header */}
@@ -426,6 +510,18 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
           >
             <span className="material-symbols-outlined text-lg">content_paste</span>
           </button>
+
+          {/* Version History Button */}
+          {note && (
+            <button
+              onClick={() => setShowVersionHistory(!showVersionHistory)}
+              className="p-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background)] rounded-lg transition-colors"
+              aria-label="Version history"
+              title="Version history"
+            >
+              <span className="material-symbols-outlined text-lg">history</span>
+            </button>
+          )}
 
           {note && onDelete && (
             <button
@@ -517,6 +613,27 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
           </div>
         )}
       </div>
+
+      {/* Version History Panel */}
+      {note && showVersionHistory && (
+        <div className="fixed right-0 top-0 bottom-0 w-80 bg-[var(--background-surface)] border-l border-[var(--border)] shadow-lg z-40">
+          <VersionHistory
+            noteId={note.id}
+            onViewVersion={handleViewVersion}
+            onRestoreVersion={handleRestoreVersion}
+          />
+        </div>
+      )}
+
+      {/* Version Preview Modal */}
+      {selectedVersionId && note && (
+        <VersionPreview
+          versionId={selectedVersionId}
+          noteId={note.id}
+          onClose={() => setSelectedVersionId(null)}
+          onRestore={() => handleRestoreVersion(selectedVersionId)}
+        />
+      )}
     </div>
   );
 }
