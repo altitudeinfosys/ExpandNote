@@ -85,16 +85,10 @@ export interface UserSettings {
   updated_at: string;
 }
 
-export interface NoteVersion {
-  id: string;
-  note_id: string;
-  title: string | null;
-  content: string;
-  version_number: number;
-  created_at: string;
-}
-
 export type SyncStatus = 'synced' | 'syncing' | 'pending' | 'offline' | 'conflict';
+
+// Version types
+export * from './version';
 
 // UI-specific types
 export interface NoteWithMetadata extends Note {
