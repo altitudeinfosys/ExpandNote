@@ -63,6 +63,11 @@ CREATE INDEX IF NOT EXISTS idx_note_versions_note_id ON note_versions(note_id);
 CREATE INDEX IF NOT EXISTS idx_note_versions_created_at ON note_versions(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_note_versions_user_id ON note_versions(user_id);
 
+-- Prevent duplicate baseline versions (version_number = 1) from race conditions
+CREATE UNIQUE INDEX IF NOT EXISTS idx_note_versions_baseline_unique
+  ON note_versions(note_id)
+  WHERE version_number = 1;
+
 -- Function to auto-increment version_number per note
 CREATE OR REPLACE FUNCTION set_version_number()
 RETURNS TRIGGER AS $$
@@ -102,7 +107,7 @@ CREATE POLICY "Users can delete their own note versions"
   ON note_versions FOR DELETE
   USING (auth.uid() = user_id);
 
--- Function to clean up old versions (keep last 10 per note)
+-- Function to clean up old versions (keep last 5 per note)
 CREATE OR REPLACE FUNCTION cleanup_old_versions()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -113,7 +118,7 @@ BEGIN
       FROM note_versions
       WHERE note_id = NEW.note_id
       ORDER BY version_number DESC
-      OFFSET 10
+      OFFSET 5
       LIMIT 1
     );
   RETURN NEW;

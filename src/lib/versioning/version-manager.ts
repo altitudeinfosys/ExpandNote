@@ -1,5 +1,6 @@
 import { CreateVersionParams, NoteVersion, VersionListItem } from '@/types/version';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { SIGNIFICANT_CHANGE_THRESHOLD, AUTO_SAVE_VERSION_FREQUENCY } from './constants';
 
 /**
  * Creates a new version snapshot of a note
@@ -54,14 +55,14 @@ export function shouldCreateVersion(
     return true;
   }
 
-  // For auto_save, create every 5th save
-  if (trigger === 'auto_save' && saveCount % 5 === 0) return true;
+  // For auto_save, create every Nth save
+  if (trigger === 'auto_save' && saveCount % AUTO_SAVE_VERSION_FREQUENCY === 0) return true;
 
-  // Check if content changed significantly (>100 chars difference)
+  // Check if content changed significantly
   const contentDiff = Math.abs(
     currentContent.length - (previousContent?.length || 0)
   );
-  if (contentDiff > 100) return true;
+  if (contentDiff > SIGNIFICANT_CHANGE_THRESHOLD) return true;
 
   return false;
 }

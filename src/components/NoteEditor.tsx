@@ -121,7 +121,9 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
 
         // If no versions exist, create baseline
         if (!existingVersions || existingVersions.length === 0) {
-          console.log('[Versioning] Creating baseline version for note:', note.id);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[Versioning] Creating baseline version for note:', note.id);
+          }
 
           const response = await fetch(`/api/notes/${note.id}/versions`, {
             method: 'POST',
@@ -132,8 +134,25 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
           });
 
           if (response.ok) {
-            console.log('[Versioning] Baseline version created');
+            if (process.env.NODE_ENV === 'development') {
+              console.log('[Versioning] Baseline version created');
+            }
             baselineCreatedRef.current.add(note.id);
+          } else {
+            // Another tab may have created the baseline (race condition)
+            // Check again if versions now exist
+            const { data: recheckVersions } = await supabase
+              .from('note_versions')
+              .select('id')
+              .eq('note_id', note.id)
+              .limit(1);
+
+            if (recheckVersions && recheckVersions.length > 0) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('[Versioning] Baseline version already exists (created by another tab)');
+              }
+              baselineCreatedRef.current.add(note.id);
+            }
           }
         } else {
           // Mark as already having versions
@@ -188,19 +207,26 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
           const previousContent = lastVersion?.content || null;
           const currentContent = content.trim();
 
-          console.log('[Versioning] Checking if should create version:', {
-            previousContent: previousContent?.substring(0, 50),
-            currentContent: currentContent.substring(0, 50),
-            saveCount: newSaveCount,
-            contentDiff: Math.abs(currentContent.length - (previousContent?.length || 0))
-          });
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[Versioning] Checking if should create version:', {
+              previousContent: previousContent?.substring(0, 50),
+              currentContent: currentContent.substring(0, 50),
+              saveCount: newSaveCount,
+              contentDiff: Math.abs(currentContent.length - (previousContent?.length || 0))
+            });
+          }
 
           // Use shouldCreateVersion to determine if version should be created
           const shouldCreate = shouldCreateVersion(currentContent, previousContent, 'auto_save', newSaveCount);
-          console.log('[Versioning] Should create version:', shouldCreate);
+
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[Versioning] Should create version:', shouldCreate);
+          }
 
           if (shouldCreate) {
-            console.log('[Versioning] Creating version...');
+            if (process.env.NODE_ENV === 'development') {
+              console.log('[Versioning] Creating version...');
+            }
             const response = await fetch(`/api/notes/${note.id}/versions`, {
               method: 'POST',
               headers: {
@@ -208,7 +234,9 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
               },
               body: JSON.stringify({ trigger: 'auto_save' }),
             });
-            console.log('[Versioning] Version created:', response.status);
+            if (process.env.NODE_ENV === 'development') {
+              console.log('[Versioning] Version created:', response.status);
+            }
           }
         } catch (error) {
           console.error('Failed to check/create version:', error);
