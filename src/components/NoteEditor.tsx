@@ -191,20 +191,19 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
       setLastSaved(new Date());
       setHasUnsavedChanges(false);
 
-      // Get or initialize save counter for this note
-      const currentSaveCount = saveCountRef.current.get(note.id) || 0;
-      const newSaveCount = currentSaveCount + 1;
-      saveCountRef.current.set(note.id, newSaveCount);
-
       // Check if we should create a version using smart logic
       if (note) {
+        // Get or initialize save counter for this note
+        const currentSaveCount = saveCountRef.current.get(note.id) || 0;
+        const newSaveCount = currentSaveCount + 1;
+        saveCountRef.current.set(note.id, newSaveCount);
         try {
           const currentContent = content.trim();
 
           // Get cached last version content or fetch if not cached
-          let previousContent = lastVersionContentRef.current.get(note.id);
+          let previousContent: string | null = lastVersionContentRef.current.get(note.id) ?? null;
 
-          if (previousContent === undefined) {
+          if (previousContent === null && !lastVersionContentRef.current.has(note.id)) {
             // Not cached yet, fetch from database
             const supabase = createClient();
             const { data: lastVersion } = await supabase
