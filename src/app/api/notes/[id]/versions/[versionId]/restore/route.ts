@@ -24,7 +24,7 @@ export async function POST(
     }
 
     // Get version to restore
-    const version = await getVersion(versionId);
+    const version = await getVersion(supabase, versionId);
     if (!version) {
       return NextResponse.json({ error: 'Version not found' }, { status: 404 });
     }
@@ -43,7 +43,7 @@ export async function POST(
 
     // Create a version of current state before restoring (backup)
     if (currentNote) {
-      await createVersion({
+      await createVersion(supabase, {
         noteId: currentNote.id,
         userId: user.id,
         title: currentNote.title,
