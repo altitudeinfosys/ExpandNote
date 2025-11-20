@@ -7,6 +7,9 @@ import { TagSelector } from './TagSelector';
 import { formatDateTime } from '@/lib/utils/date';
 import { AUTO_SAVE_DELAY_MS } from '@/lib/constants';
 import toast from 'react-hot-toast';
+import { VersionHistory, VersionPreview } from './VersionHistory';
+import { shouldCreateVersion } from '@/lib/versioning/version-manager';
+import { createClient } from '@/lib/supabase/client';
 interface NoteEditorProps {
   note: Note | null;
   onSave: (noteData: {
@@ -33,9 +36,20 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
   const [aiProfiles, setAiProfiles] = useState<AIProfile[]>([]);
   const [executingProfileId, setExecutingProfileId] = useState<string | null>(null);
   const [executedProfileIds, setExecutedProfileIds] = useState<Set<string>>(new Set());
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
 
   // Ref for textarea to manage cursor position
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Track if we've created the initial baseline version
+  const baselineCreatedRef = useRef<Set<string>>(new Set());
+
+  // Track save count per note to persist across remounts
+  const saveCountRef = useRef<Map<string, number>>(new Map());
+
+  // Cache last version content to avoid repeated DB queries
+  const lastVersionContentRef = useRef<Map<string, string | null>>(new Map());
 
   // Reset state when note ID changes (not just when note object reference changes)
   useEffect(() => {
@@ -92,6 +106,75 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
     // Note: We don't track tag changes as part of auto-save since they're saved separately
   }, [title, content, isFavorite, note]);
 
+  // Create baseline version when note is first opened
+  useEffect(() => {
+    const createBaselineVersion = async () => {
+      if (!note || !note.id || !note.content) return;
+
+      // Skip if we already created baseline for this note
+      if (baselineCreatedRef.current.has(note.id)) return;
+
+      try {
+        const supabase = createClient();
+
+        // Check if this note has any versions
+        const { data: existingVersions } = await supabase
+          .from('note_versions')
+          .select('id')
+          .eq('note_id', note.id)
+          .limit(1);
+
+        // If no versions exist, create baseline
+        if (!existingVersions || existingVersions.length === 0) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[Versioning] Creating baseline version for note:', note.id);
+          }
+
+          try {
+            const response = await fetch(`/api/notes/${note.id}/versions`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ trigger: 'manual' }),
+            });
+
+            if (response.ok) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('[Versioning] Baseline version created');
+              }
+              baselineCreatedRef.current.add(note.id);
+            } else if (response.status === 409 || response.status === 500) {
+              // 409 Conflict or 500 from unique constraint violation
+              // Another tab/device created the baseline (race condition)
+              if (process.env.NODE_ENV === 'development') {
+                console.log('[Versioning] Baseline version already exists (created concurrently)');
+              }
+              baselineCreatedRef.current.add(note.id);
+            } else {
+              // Unexpected error, log but don't fail
+              if (process.env.NODE_ENV === 'development') {
+                console.error('[Versioning] Failed to create baseline:', response.status);
+              }
+            }
+          } catch (fetchError) {
+            // Network error or other issue - silently fail
+            if (process.env.NODE_ENV === 'development') {
+              console.error('[Versioning] Network error creating baseline:', fetchError);
+            }
+          }
+        } else {
+          // Mark as already having versions
+          baselineCreatedRef.current.add(note.id);
+        }
+      } catch (error) {
+        console.error('Failed to create baseline version:', error);
+      }
+    };
+
+    createBaselineVersion();
+  }, [note?.id]);
+
   const handleSave = useCallback(async () => {
     if (!content.trim() && !title.trim()) {
       // Allow saving with just a title or just content, but not both empty
@@ -107,12 +190,83 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
       });
       setLastSaved(new Date());
       setHasUnsavedChanges(false);
+
+      // Check if we should create a version using smart logic
+      if (note) {
+        // Get or initialize save counter for this note
+        const currentSaveCount = saveCountRef.current.get(note.id) || 0;
+        const newSaveCount = currentSaveCount + 1;
+        saveCountRef.current.set(note.id, newSaveCount);
+        try {
+          const currentContent = content.trim();
+
+          // Get cached last version content or fetch if not cached
+          let previousContent: string | null = lastVersionContentRef.current.get(note.id) ?? null;
+
+          if (previousContent === null && !lastVersionContentRef.current.has(note.id)) {
+            // Not cached yet, fetch from database
+            const supabase = createClient();
+            const { data: lastVersion } = await supabase
+              .from('note_versions')
+              .select('content')
+              .eq('note_id', note.id)
+              .order('version_number', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            previousContent = lastVersion?.content || null;
+            lastVersionContentRef.current.set(note.id, previousContent);
+          }
+
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[Versioning] Checking if should create version:', {
+              previousContent: previousContent?.substring(0, 50),
+              currentContent: currentContent.substring(0, 50),
+              saveCount: newSaveCount,
+              contentDiff: Math.abs(currentContent.length - (previousContent?.length || 0))
+            });
+          }
+
+          // Use shouldCreateVersion to determine if version should be created
+          const shouldCreate = shouldCreateVersion(currentContent, previousContent, 'auto_save', newSaveCount);
+
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[Versioning] Should create version:', shouldCreate);
+          }
+
+          if (shouldCreate) {
+            if (process.env.NODE_ENV === 'development') {
+              console.log('[Versioning] Creating version...');
+            }
+            const response = await fetch(`/api/notes/${note.id}/versions`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ trigger: 'auto_save' }),
+            });
+
+            if (response.ok) {
+              // Update cache with new version content
+              lastVersionContentRef.current.set(note.id, currentContent);
+              if (process.env.NODE_ENV === 'development') {
+                console.log('[Versioning] Version created successfully');
+              }
+            } else if (process.env.NODE_ENV === 'development') {
+              console.log('[Versioning] Version creation failed:', response.status);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to check/create version:', error);
+          // Don't fail the save if versioning fails
+        }
+      }
     } catch (error) {
       console.error('Failed to save note:', error);
     } finally {
       setIsSaving(false);
     }
-  }, [title, content, isFavorite, onSave]);
+  }, [title, content, isFavorite, onSave, note]);
 
   // Auto-save after delay
   useEffect(() => {
@@ -229,6 +383,18 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
     const profileName = profile?.name || 'AI Profile';
 
     try {
+      // Create version BEFORE AI execution
+      await fetch(`/api/notes/${note.id}/versions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          trigger: 'before_ai',
+          aiProfileId: profileId
+        }),
+      });
+
       const response = await fetch(`/api/ai-profiles/${profileId}/execute`, {
         method: 'POST',
         headers: {
@@ -245,6 +411,18 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
       }
 
       const result = await response.json();
+
+      // Create version AFTER AI execution
+      await fetch(`/api/notes/${note.id}/versions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          trigger: 'after_ai',
+          aiProfileId: profileId
+        }),
+      });
 
       // Show success message
       toast.success(`${profileName} executed successfully`);
@@ -348,6 +526,79 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
     }
   }, [content]);
 
+  // View a specific version
+  const handleViewVersion = useCallback((versionId: string) => {
+    setSelectedVersionId(versionId);
+  }, []);
+
+  // Restore a version
+  const handleRestoreVersion = useCallback(async (versionId: string) => {
+    if (!note) return;
+
+    const confirmed = confirm('Are you sure you want to restore this version? Your current changes will be saved as a new version.');
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/notes/${note.id}/versions/${versionId}/restore`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to restore version');
+      }
+
+      const result = await response.json();
+
+      toast.success('Version restored successfully');
+      setSelectedVersionId(null);
+      setShowVersionHistory(false);
+
+      // Update local state instead of full page reload
+      if (result.note) {
+        setTitle(result.note.title || '');
+        setContent(result.note.content || '');
+        setLastSaved(new Date(result.note.updated_at));
+        setHasUnsavedChanges(false);
+
+        // Clear version cache since we restored
+        lastVersionContentRef.current.delete(note.id);
+
+        // Fetch updated tags if available
+        if (getTagsForNote) {
+          const tags = await getTagsForNote(note.id);
+          setSelectedTags(tags || []);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to restore version:', error);
+      toast.error('Failed to restore version');
+    }
+  }, [note, getTagsForNote]);
+
+  // Create a manual version
+  const handleCreateManualVersion = useCallback(async () => {
+    if (!note) return;
+
+    try {
+      const response = await fetch(`/api/notes/${note.id}/versions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ trigger: 'manual' }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create version');
+      }
+
+      toast.success('Version saved');
+    } catch (error) {
+      console.error('Failed to create version:', error);
+      toast.error('Failed to save version');
+    }
+  }, [note]);
+
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
       {/* Header */}
@@ -426,6 +677,18 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
           >
             <span className="material-symbols-outlined text-lg">content_paste</span>
           </button>
+
+          {/* Version History Button */}
+          {note && (
+            <button
+              onClick={() => setShowVersionHistory(!showVersionHistory)}
+              className="p-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background)] rounded-lg transition-colors"
+              aria-label="Version history"
+              title="Version history"
+            >
+              <span className="material-symbols-outlined text-lg">history</span>
+            </button>
+          )}
 
           {note && onDelete && (
             <button
@@ -517,6 +780,28 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
           </div>
         )}
       </div>
+
+      {/* Version History Panel */}
+      {note && showVersionHistory && (
+        <div className="fixed right-0 top-0 bottom-0 w-80 bg-[var(--background-surface)] border-l border-[var(--border)] shadow-lg z-40">
+          <VersionHistory
+            noteId={note.id}
+            onViewVersion={handleViewVersion}
+            onRestoreVersion={handleRestoreVersion}
+            onClose={() => setShowVersionHistory(false)}
+          />
+        </div>
+      )}
+
+      {/* Version Preview Modal */}
+      {selectedVersionId && note && (
+        <VersionPreview
+          versionId={selectedVersionId}
+          noteId={note.id}
+          onClose={() => setSelectedVersionId(null)}
+          onRestore={() => handleRestoreVersion(selectedVersionId)}
+        />
+      )}
     </div>
   );
 }
