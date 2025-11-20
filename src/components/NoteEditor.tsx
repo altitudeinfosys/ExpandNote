@@ -8,6 +8,8 @@ import { formatDateTime } from '@/lib/utils/date';
 import { AUTO_SAVE_DELAY_MS } from '@/lib/constants';
 import toast from 'react-hot-toast';
 import { VersionHistory, VersionPreview } from './VersionHistory';
+import { shouldCreateVersion } from '@/lib/versioning/version-manager';
+import { createClient } from '@/lib/supabase/client';
 interface NoteEditorProps {
   note: Note | null;
   onSave: (noteData: {
@@ -40,6 +42,9 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
 
   // Ref for textarea to manage cursor position
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Track if we've created the initial baseline version
+  const baselineCreatedRef = useRef<Set<string>>(new Set());
 
   // Reset state when note ID changes (not just when note object reference changes)
   useEffect(() => {
@@ -96,6 +101,52 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
     // Note: We don't track tag changes as part of auto-save since they're saved separately
   }, [title, content, isFavorite, note]);
 
+  // Create baseline version when note is first opened
+  useEffect(() => {
+    const createBaselineVersion = async () => {
+      if (!note || !note.id || !note.content) return;
+
+      // Skip if we already created baseline for this note
+      if (baselineCreatedRef.current.has(note.id)) return;
+
+      try {
+        const supabase = createClient();
+
+        // Check if this note has any versions
+        const { data: existingVersions } = await supabase
+          .from('note_versions')
+          .select('id')
+          .eq('note_id', note.id)
+          .limit(1);
+
+        // If no versions exist, create baseline
+        if (!existingVersions || existingVersions.length === 0) {
+          console.log('[Versioning] Creating baseline version for note:', note.id);
+
+          const response = await fetch(`/api/notes/${note.id}/versions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ trigger: 'manual' }),
+          });
+
+          if (response.ok) {
+            console.log('[Versioning] Baseline version created');
+            baselineCreatedRef.current.add(note.id);
+          }
+        } else {
+          // Mark as already having versions
+          baselineCreatedRef.current.add(note.id);
+        }
+      } catch (error) {
+        console.error('Failed to create baseline version:', error);
+      }
+    };
+
+    createBaselineVersion();
+  }, [note?.id]);
+
   const handleSave = useCallback(async () => {
     if (!content.trim() && !title.trim()) {
       // Allow saving with just a title or just content, but not both empty
@@ -116,15 +167,53 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
       const newSaveCount = saveCount + 1;
       setSaveCount(newSaveCount);
 
-      // Create version every 5th save
-      if (note && newSaveCount % 5 === 0) {
-        await fetch(`/api/notes/${note.id}/versions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ trigger: 'auto_save' }),
-        });
+      // Check if we should create a version using smart logic
+      if (note) {
+        try {
+          const supabase = createClient();
+
+          // Get last version content for comparison
+          const { data: lastVersion, error: versionError } = await supabase
+            .from('note_versions')
+            .select('content')
+            .eq('note_id', note.id)
+            .order('version_number', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (versionError) {
+            console.error('Error fetching last version:', versionError);
+          }
+
+          const previousContent = lastVersion?.content || null;
+          const currentContent = content.trim();
+
+          console.log('[Versioning] Checking if should create version:', {
+            previousContent: previousContent?.substring(0, 50),
+            currentContent: currentContent.substring(0, 50),
+            saveCount: newSaveCount,
+            contentDiff: Math.abs(currentContent.length - (previousContent?.length || 0))
+          });
+
+          // Use shouldCreateVersion to determine if version should be created
+          const shouldCreate = shouldCreateVersion(currentContent, previousContent, 'auto_save', newSaveCount);
+          console.log('[Versioning] Should create version:', shouldCreate);
+
+          if (shouldCreate) {
+            console.log('[Versioning] Creating version...');
+            const response = await fetch(`/api/notes/${note.id}/versions`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ trigger: 'auto_save' }),
+            });
+            console.log('[Versioning] Version created:', response.status);
+          }
+        } catch (error) {
+          console.error('Failed to check/create version:', error);
+          // Don't fail the save if versioning fails
+        }
       }
     } catch (error) {
       console.error('Failed to save note:', error);
@@ -637,6 +726,7 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
             noteId={note.id}
             onViewVersion={handleViewVersion}
             onRestoreVersion={handleRestoreVersion}
+            onClose={() => setShowVersionHistory(false)}
           />
         </div>
       )}

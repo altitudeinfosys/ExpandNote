@@ -8,9 +8,10 @@ interface VersionHistoryProps {
   noteId: string;
   onViewVersion: (versionId: string) => void;
   onRestoreVersion: (versionId: string) => void;
+  onClose: () => void;
 }
 
-export function VersionHistory({ noteId, onViewVersion, onRestoreVersion }: VersionHistoryProps) {
+export function VersionHistory({ noteId, onViewVersion, onRestoreVersion, onClose }: VersionHistoryProps) {
   const [versions, setVersions] = useState<VersionListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,36 +61,83 @@ export function VersionHistory({ noteId, onViewVersion, onRestoreVersion }: Vers
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary)]"></div>
+      <div className="flex flex-col h-full">
+        <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between">
+          <h3 className="font-semibold text-[var(--foreground)]">Version History</h3>
+          <button
+            onClick={onClose}
+            className="p-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background)] rounded-lg transition-colors"
+            aria-label="Close version history"
+          >
+            <span className="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+        <div className="flex items-center justify-center p-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary)]"></div>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-4 text-center text-red-600">
-        {error}
+      <div className="flex flex-col h-full">
+        <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between">
+          <h3 className="font-semibold text-[var(--foreground)]">Version History</h3>
+          <button
+            onClick={onClose}
+            className="p-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background)] rounded-lg transition-colors"
+            aria-label="Close version history"
+          >
+            <span className="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+        <div className="p-4 text-center text-red-600">
+          {error}
+        </div>
       </div>
     );
   }
 
   if (versions.length === 0) {
     return (
-      <div className="p-8 text-center text-[var(--foreground-secondary)]">
-        <p>No version history yet</p>
-        <p className="text-sm mt-2">Versions are created automatically when you edit this note</p>
+      <div className="flex flex-col h-full">
+        <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between">
+          <h3 className="font-semibold text-[var(--foreground)]">Version History</h3>
+          <button
+            onClick={onClose}
+            className="p-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background)] rounded-lg transition-colors"
+            aria-label="Close version history"
+          >
+            <span className="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+        <div className="flex-1 flex items-center justify-center p-8 text-center text-[var(--foreground-secondary)]">
+          <div>
+            <p>No version history yet</p>
+            <p className="text-sm mt-2">Versions are created automatically when you edit this note</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-4 py-3 border-b border-[var(--border)]">
-        <h3 className="font-semibold text-[var(--foreground)]">Version History</h3>
-        <p className="text-xs text-[var(--foreground-secondary)] mt-1">
-          {versions.length} {versions.length === 1 ? 'version' : 'versions'}
-        </p>
+      <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between">
+        <div>
+          <h3 className="font-semibold text-[var(--foreground)]">Version History</h3>
+          <p className="text-xs text-[var(--foreground-secondary)] mt-1">
+            {versions.length} {versions.length === 1 ? 'version' : 'versions'}
+          </p>
+        </div>
+        <button
+          onClick={onClose}
+          className="p-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background)] rounded-lg transition-colors"
+          aria-label="Close version history"
+        >
+          <span className="material-symbols-outlined text-xl">close</span>
+        </button>
       </div>
 
       <div className="flex-1 overflow-auto">
