@@ -18,6 +18,7 @@ export function VersionHistory({ noteId, onViewVersion, onRestoreVersion, onClos
 
   useEffect(() => {
     fetchVersions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noteId]);
 
   const fetchVersions = async () => {

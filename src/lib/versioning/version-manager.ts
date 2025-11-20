@@ -25,7 +25,9 @@ export async function createVersion(
     .single();
 
   if (error) {
-    console.error('Failed to create version:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Failed to create version:', error);
+    }
     throw new Error(`Failed to create version: ${error.message}`);
   }
 
@@ -81,7 +83,9 @@ export async function getLastVersionContent(supabase: SupabaseClient, noteId: st
     .maybeSingle();
 
   if (error) {
-    console.error('Failed to get last version:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Failed to get last version:', error);
+    }
     return null;
   }
 
@@ -100,7 +104,9 @@ export async function getVersions(supabase: SupabaseClient, noteId: string): Pro
     .order('version_number', { ascending: false });
 
   if (error) {
-    console.error('Failed to get versions:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Failed to get versions:', error);
+    }
     throw new Error(`Failed to get versions: ${error.message}`);
   }
 
@@ -119,7 +125,9 @@ export async function getVersion(supabase: SupabaseClient, versionId: string): P
     .single();
 
   if (error) {
-    console.error('Failed to get version:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Failed to get version:', error);
+    }
     return null;
   }
 
