@@ -10,6 +10,7 @@
 // Direct references to env vars - Next.js will inline these at build time
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 // Validate on module load
 if (!SUPABASE_URL) {
@@ -31,5 +32,7 @@ export const config = {
     // Non-null assertions are safe here because we've validated above
     url: SUPABASE_URL!,
     anonKey: SUPABASE_ANON_KEY!,
+    // Service role key is optional - only needed for server-side operations that bypass RLS
+    serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
   },
 } as const;

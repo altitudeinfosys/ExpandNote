@@ -42,11 +42,15 @@ export async function POST(request: NextRequest) {
     // Update user settings with new token and email address
     const { data: settings, error: updateError } = await supabase
       .from('user_settings')
-      .update({
-        email_to_note_token: token,
-        email_to_note_address: emailAddress,
-      })
-      .eq('user_id', user.id)
+      .upsert(
+        {
+          user_id: user.id,
+          email_to_note_enabled: true,
+          email_to_note_token: token,
+          email_to_note_address: emailAddress,
+        },
+        { onConflict: 'user_id' }
+      )
       .select()
       .single();
 

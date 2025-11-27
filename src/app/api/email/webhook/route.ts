@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
-import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/server';
 import { parseEmailContent, extractTagsFromSubject } from '@/lib/email/parser';
 import { MAX_CONTENT_SIZE_BYTES } from '@/lib/constants';
 
@@ -68,8 +68,8 @@ export async function POST(request: NextRequest) {
 
     const token = tokenMatch[1].toLowerCase();
 
-    // Create admin Supabase client (webhook is not authenticated by user)
-    const supabase = await createClient();
+    // Create service role Supabase client to bypass RLS (webhooks are not authenticated)
+    const supabase = createServiceClient();
 
     // Lookup user by token
     const { data: userSettings, error: lookupError } = await supabase
@@ -140,14 +140,13 @@ export async function POST(request: NextRequest) {
     // Extract tags from subject line
     const tags = extractTagsFromSubject(subject);
 
-    // Create note
+    // Create note (without tags - they'll be added via note_tags table)
     const { data: note, error: createError } = await supabase
       .from('notes')
       .insert({
         user_id: userSettings.user_id,
         title: subject || 'Note from email',
         content: content || '',
-        tags: tags,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
