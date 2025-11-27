@@ -3,6 +3,7 @@ import { Resend } from 'resend';
 import { createServiceClient } from '@/lib/supabase/server';
 import { parseEmailContent, extractTagsFromSubject } from '@/lib/email/parser';
 import { MAX_CONTENT_SIZE_BYTES } from '@/lib/constants';
+import { config } from '@/lib/config';
 
 /**
  * POST /api/email/webhook
@@ -27,13 +28,61 @@ import { MAX_CONTENT_SIZE_BYTES } from '@/lib/constants';
  */
 export async function POST(request: NextRequest) {
   try {
-    // TODO: Verify webhook signature using Resend's webhook secret
-    // This should be done in production for security
-    // const signature = request.headers.get('svix-signature');
-    // const svixId = request.headers.get('svix-id');
-    // const svixTimestamp = request.headers.get('svix-timestamp');
+    // Verify webhook signature for security
+    const signature = request.headers.get('svix-signature');
+    const svixId = request.headers.get('svix-id');
+    const svixTimestamp = request.headers.get('svix-timestamp');
 
-    const event = await request.json();
+    let parsedEvent;
+
+    if (config.resend.webhookSecret) {
+      // Only verify if webhook secret is configured
+      if (!signature || !svixId || !svixTimestamp) {
+        console.error('Missing webhook signature headers');
+        return NextResponse.json(
+          { error: 'Missing webhook signature headers' },
+          { status: 401 }
+        );
+      }
+
+      const resendApiKey = process.env.RESEND_API_KEY;
+      if (!resendApiKey) {
+        console.error('RESEND_API_KEY is not set');
+        return NextResponse.json(
+          { error: 'Server configuration error' },
+          { status: 500 }
+        );
+      }
+
+      const resend = new Resend(resendApiKey);
+      const payload = await request.text();
+
+      try {
+        resend.webhooks.verify({
+          payload,
+          headers: {
+            id: svixId,
+            timestamp: svixTimestamp,
+            signature: signature,
+          },
+          webhookSecret: config.resend.webhookSecret,
+        });
+      } catch (error) {
+        console.error('Webhook signature verification failed:', error);
+        return NextResponse.json(
+          { error: 'Invalid webhook signature' },
+          { status: 401 }
+        );
+      }
+
+      // Parse the event after verification
+      parsedEvent = JSON.parse(payload);
+    } else {
+      // No webhook secret configured - skip verification (development mode)
+      console.warn('RESEND_WEBHOOK_SECRET not configured - skipping signature verification');
+      parsedEvent = await request.json();
+    }
+    const event = parsedEvent;
 
     // Validate event type
     if (event.type !== 'email.received') {
@@ -100,6 +149,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if already processed (idempotency)
+    const { data: alreadyProcessed } = await supabase
+      .from('processed_emails')
+      .select('note_id')
+      .eq('email_id', email_id)
+      .maybeSingle();
+
+    if (alreadyProcessed) {
+      console.log(`Email ${email_id} already processed, returning success`);
+      return NextResponse.json({
+        success: true,
+        note_id: alreadyProcessed.note_id,
+        message: 'Email already processed (idempotent)',
+      });
+    }
+
     // Initialize Resend client
     const resendApiKey = process.env.RESEND_API_KEY;
     if (!resendApiKey) {
@@ -161,9 +226,69 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Record that we processed this email (idempotency)
+    await supabase
+      .from('processed_emails')
+      .insert({
+        email_id: email_id,
+        note_id: note.id,
+      });
+
+    // Process tags extracted from subject
+    let tagsCreated = 0;
+    if (tags.length > 0) {
+      for (const tagName of tags) {
+        // Check if tag exists for this user
+        const { data: existingTag } = await supabase
+          .from('tags')
+          .select('id')
+          .eq('user_id', userSettings.user_id)
+          .eq('name', tagName)
+          .maybeSingle();
+
+        let tagId: string;
+
+        if (existingTag) {
+          tagId = existingTag.id;
+        } else {
+          // Create new tag
+          const { data: newTag, error: tagError } = await supabase
+            .from('tags')
+            .insert({
+              user_id: userSettings.user_id,
+              name: tagName,
+            })
+            .select('id')
+            .single();
+
+          if (tagError) {
+            console.error(`Failed to create tag ${tagName}:`, tagError);
+            continue; // Skip this tag but continue with others
+          }
+
+          tagId = newTag.id;
+        }
+
+        // Create note_tags association
+        const { error: associationError } = await supabase
+          .from('note_tags')
+          .insert({
+            note_id: note.id,
+            tag_id: tagId,
+          });
+
+        if (associationError) {
+          console.error(`Failed to associate tag ${tagName}:`, associationError);
+        } else {
+          tagsCreated++;
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       note_id: note.id,
+      tags_created: tagsCreated,
       message: 'Note created successfully',
     });
 
