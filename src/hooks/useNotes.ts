@@ -23,11 +23,12 @@ export function useNotes() {
   const searchAbortControllerRef = useRef<AbortController | null>(null);
 
   // Define mutually exclusive filter options using discriminated union
-  // TypeScript will prevent both showTrash and showFavorites from being true simultaneously
+  // TypeScript will prevent multiple exclusive filters from being true simultaneously
   type FetchNotesOptions =
-    | { showTrash: true; showFavorites?: never }
-    | { showTrash?: never; showFavorites: true }
-    | { showTrash?: never; showFavorites?: never }
+    | { showTrash: true; showFavorites?: never; showArchived?: never }
+    | { showTrash?: never; showFavorites: true; showArchived?: never }
+    | { showTrash?: never; showFavorites?: never; showArchived: true }
+    | { showTrash?: never; showFavorites?: never; showArchived?: never }
     | undefined;
 
   // Fetch all notes
@@ -38,12 +39,14 @@ export function useNotes() {
     try {
       const params = new URLSearchParams();
 
-      // Note: trash and favorites filters are mutually exclusive (enforced by TypeScript types)
-      // Priority: Trash > Favorites > All Notes
+      // Note: trash, favorites, and archived filters are mutually exclusive (enforced by TypeScript types)
+      // Priority: Trash > Archived > Favorites > All Notes
       if (options?.showTrash) {
         params.append('trash', 'true');
+      } else if (options?.showArchived) {
+        params.append('archived', 'true');
       } else if (options?.showFavorites) {
-        // Only apply favorites filter if not showing trash
+        // Only apply favorites filter if not showing trash or archived
         params.append('favorites', 'true');
       }
 
@@ -71,6 +74,7 @@ export function useNotes() {
       title: string | null;
       content: string;
       is_favorite?: boolean;
+      is_archived?: boolean;
       tagIds?: string[];
     }) => {
       try {
@@ -106,6 +110,7 @@ export function useNotes() {
         title?: string | null;
         content?: string;
         is_favorite?: boolean;
+        is_archived?: boolean;
         tagIds?: string[];
       }
     ) => {

@@ -15,6 +15,7 @@ export interface Note {
   updated_at: string;
   deleted_at: string | null;
   is_favorite: boolean;
+  is_archived: boolean;
   sync_version: number;
   tags?: Tag[];
 }

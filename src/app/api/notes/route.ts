@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
     const sortOrder = searchParams.get('sortOrder') === 'asc' ? 'asc' : 'desc';
     const showFavorites = searchParams.get('favorites') === 'true';
     const showTrash = searchParams.get('trash') === 'true';
+    const showArchived = searchParams.get('archived') === 'true';
 
     // Pagination
     const limit = Math.min(
@@ -63,11 +64,14 @@ export async function GET(request: NextRequest) {
     if (showTrash) {
       // Show only deleted notes
       query = query.not('deleted_at', 'is', null);
+    } else if (showArchived) {
+      // Show only archived notes (non-deleted)
+      query = query.is('deleted_at', null).eq('is_archived', true);
     } else {
-      // Show only non-deleted notes
-      query = query.is('deleted_at', null);
+      // Show only non-deleted, non-archived notes (default view)
+      query = query.is('deleted_at', null).eq('is_archived', false);
 
-      // Apply favorites filter only when not showing trash
+      // Apply favorites filter only when not showing trash or archived
       // This prevents the confusing UX of "favorited trash items"
       if (showFavorites) {
         query = query.eq('is_favorite', true);
@@ -137,7 +141,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, content, is_favorite, tagIds } = body;
+    const { title, content, is_favorite, is_archived, tagIds } = body;
 
     // Validate content exists (can be empty for new notes)
     if (content === undefined || content === null) {
@@ -171,6 +175,7 @@ export async function POST(request: NextRequest) {
         title: title || null,
         content,
         is_favorite: is_favorite || false,
+        is_archived: is_archived || false,
       })
       .select()
       .single();

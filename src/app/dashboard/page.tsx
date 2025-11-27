@@ -13,11 +13,12 @@ import { SearchBar } from '@/components/SearchBar';
 const MOBILE_BREAKPOINT = 768;
 
 // View types
-type DashboardView = 'all-notes' | 'favorites' | 'trash';
+type DashboardView = 'all-notes' | 'favorites' | 'archived' | 'trash';
 
 const DASHBOARD_VIEWS = {
   ALL_NOTES: 'all-notes' as const,
   FAVORITES: 'favorites' as const,
+  ARCHIVED: 'archived' as const,
   TRASH: 'trash' as const,
 };
 
@@ -96,6 +97,7 @@ export default function DashboardPage() {
         title: null,
         content: '',
         is_favorite: false,
+        is_archived: false,
       });
       setSelectedNoteId(newNote.id);
       setShowEditor(true);
@@ -110,7 +112,13 @@ export default function DashboardPage() {
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      await fetchNotes(currentView === DASHBOARD_VIEWS.TRASH ? { showTrash: true } : undefined);
+      if (currentView === DASHBOARD_VIEWS.TRASH) {
+        await fetchNotes({ showTrash: true });
+      } else if (currentView === DASHBOARD_VIEWS.ARCHIVED) {
+        await fetchNotes({ showArchived: true });
+      } else {
+        await fetchNotes();
+      }
     } catch (error) {
       console.error('Failed to refresh notes:', error);
     } finally {
@@ -143,20 +151,25 @@ export default function DashboardPage() {
       title: string | null;
       content: string;
       is_favorite: boolean;
+      is_archived: boolean;
     }) => {
       if (!selectedNote) return;
 
-      // Check if favorite status changed
+      // Check if favorite or archived status changed
       const favoriteChanged = noteData.is_favorite !== selectedNote.is_favorite;
+      const archivedChanged = noteData.is_archived !== selectedNote.is_archived;
 
       await updateNoteById(selectedNote.id, noteData);
 
-      // Refetch current view if favorite status changed
-      // This ensures the list stays in sync when toggling favorites
-      if (favoriteChanged) {
+      // Refetch current view if favorite or archived status changed
+      // This ensures the list stays in sync when toggling favorites or archiving
+      if (favoriteChanged || archivedChanged) {
         switch (currentView) {
           case DASHBOARD_VIEWS.FAVORITES:
             fetchNotes({ showFavorites: true });
+            break;
+          case DASHBOARD_VIEWS.ARCHIVED:
+            fetchNotes({ showArchived: true });
             break;
           case DASHBOARD_VIEWS.TRASH:
             fetchNotes({ showTrash: true });
@@ -166,8 +179,13 @@ export default function DashboardPage() {
             break;
         }
       }
+
+      // If note was archived while viewing from main list, close editor
+      if (archivedChanged && noteData.is_archived && currentView === DASHBOARD_VIEWS.ALL_NOTES) {
+        handleCloseEditor();
+      }
     },
-    [selectedNote, updateNoteById, currentView, fetchNotes]
+    [selectedNote, updateNoteById, currentView, fetchNotes, handleCloseEditor]
   );
 
   const handleDeleteNote = useCallback(
@@ -179,7 +197,13 @@ export default function DashboardPage() {
         console.error('Failed to delete note:', error);
         alert('Failed to delete note. Please try again.');
       } finally {
-        await fetchNotes(currentView === DASHBOARD_VIEWS.TRASH ? { showTrash: true } : undefined);
+        if (currentView === DASHBOARD_VIEWS.TRASH) {
+          await fetchNotes({ showTrash: true });
+        } else if (currentView === DASHBOARD_VIEWS.ARCHIVED) {
+          await fetchNotes({ showArchived: true });
+        } else {
+          await fetchNotes();
+        }
       }
     },
     [deleteNoteById, fetchNotes, handleCloseEditor, currentView]
@@ -187,7 +211,7 @@ export default function DashboardPage() {
 
   const handleSearch = useCallback(
     (query: string) => {
-      if (currentView === DASHBOARD_VIEWS.TRASH) return;
+      if (currentView === DASHBOARD_VIEWS.TRASH || currentView === DASHBOARD_VIEWS.ARCHIVED) return;
       searchNotes(query, {
         tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined
       });
@@ -211,6 +235,12 @@ export default function DashboardPage() {
     setCurrentView(DASHBOARD_VIEWS.FAVORITES);
     clearTagSelection();
     fetchNotes({ showFavorites: true });
+  }, [clearTagSelection, fetchNotes]);
+
+  const handleShowArchived = useCallback(() => {
+    setCurrentView(DASHBOARD_VIEWS.ARCHIVED);
+    clearTagSelection();
+    fetchNotes({ showArchived: true });
   }, [clearTagSelection, fetchNotes]);
 
   // Mobile detection
@@ -373,6 +403,20 @@ export default function DashboardPage() {
           </button>
 
           <button
+            onClick={handleShowArchived}
+            className={`
+              w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors
+              ${currentView === DASHBOARD_VIEWS.ARCHIVED
+                ? 'bg-[var(--primary)] text-white'
+                : 'text-[var(--foreground)] hover:bg-[var(--background)]'
+              }
+            `}
+          >
+            <span className="material-symbols-outlined">archive</span>
+            <span className="font-medium">Archived</span>
+          </button>
+
+          <button
             onClick={handleShowTrash}
             className={`
               w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors
@@ -458,6 +502,7 @@ export default function DashboardPage() {
               <h1 className="text-xl font-semibold text-[var(--foreground)]">
                 {currentView === DASHBOARD_VIEWS.ALL_NOTES && 'All Notes'}
                 {currentView === DASHBOARD_VIEWS.FAVORITES && 'Favorites'}
+                {currentView === DASHBOARD_VIEWS.ARCHIVED && 'Archived'}
                 {currentView === DASHBOARD_VIEWS.TRASH && 'Trash'}
               </h1>
               <span className="text-sm text-[var(--foreground-secondary)]">
@@ -508,7 +553,7 @@ export default function DashboardPage() {
             `}
           >
             {/* Search Bar */}
-            {currentView !== DASHBOARD_VIEWS.TRASH && (
+            {currentView !== DASHBOARD_VIEWS.TRASH && currentView !== DASHBOARD_VIEWS.ARCHIVED && (
               <div className="p-4 border-b border-[var(--border)]">
                 <SearchBar key={currentView} onSearch={handleSearch} />
               </div>

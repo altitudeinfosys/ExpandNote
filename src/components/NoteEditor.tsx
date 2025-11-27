@@ -16,6 +16,7 @@ interface NoteEditorProps {
     title: string | null;
     content: string;
     is_favorite: boolean;
+    is_archived: boolean;
   }) => Promise<void>;
   onDelete?: (noteId: string) => Promise<void>;
   onClose: () => void;
@@ -29,6 +30,7 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isFavorite, setIsFavorite] = useState(false);
+  const [isArchived, setIsArchived] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -59,6 +61,7 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
       setTitle(note.title || '');
       setContent(note.content || '');
       setIsFavorite(note.is_favorite || false);
+      setIsArchived(note.is_archived || false);
       setLastSaved(new Date(note.updated_at));
       setHasUnsavedChanges(false);
 
@@ -86,6 +89,7 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
       setTitle('');
       setContent('');
       setIsFavorite(false);
+      setIsArchived(false);
       setLastSaved(null);
       setHasUnsavedChanges(false);
       setSelectedTags([]);
@@ -101,10 +105,11 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
     const hasChanges =
       title !== (note?.title || '') ||
       content !== (note?.content || '') ||
-      isFavorite !== (note?.is_favorite || false);
+      isFavorite !== (note?.is_favorite || false) ||
+      isArchived !== (note?.is_archived || false);
     setHasUnsavedChanges(hasChanges);
     // Note: We don't track tag changes as part of auto-save since they're saved separately
-  }, [title, content, isFavorite, note]);
+  }, [title, content, isFavorite, isArchived, note]);
 
   // Create baseline version when note is first opened
   useEffect(() => {
@@ -187,6 +192,7 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
         title: title.trim() || null,
         content: content.trim(),
         is_favorite: isFavorite,
+        is_archived: isArchived,
       });
       setLastSaved(new Date());
       setHasUnsavedChanges(false);
@@ -297,6 +303,10 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
 
   const toggleFavorite = useCallback(() => {
     setIsFavorite((prev) => !prev);
+  }, []);
+
+  const toggleArchive = useCallback(() => {
+    setIsArchived((prev) => !prev);
   }, []);
 
   const handleTagsChange = useCallback(async (tags: Tag[]) => {
@@ -627,6 +637,21 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
           >
             <span className={`material-symbols-outlined ${isFavorite ? 'fill' : ''}`}>
               {isFavorite ? 'star' : 'star_border'}
+            </span>
+          </button>
+
+          <button
+            onClick={toggleArchive}
+            className={`p-2 rounded-lg transition-all flex-shrink-0 ${
+              isArchived
+                ? 'text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                : 'text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background)]'
+            }`}
+            aria-label={isArchived ? 'Unarchive note' : 'Archive note'}
+            title={isArchived ? 'Unarchive note' : 'Archive note'}
+          >
+            <span className="material-symbols-outlined">
+              {isArchived ? 'unarchive' : 'archive'}
             </span>
           </button>
 

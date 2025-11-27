@@ -41,7 +41,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Initial query to get all non-deleted notes (if needed)
+    // Initial query to get all non-deleted notes (including archived)
+    // Note: Archived notes still appear in tag searches as per requirements
     const initialQuery = supabase
       .from('notes')
       .select('*')
