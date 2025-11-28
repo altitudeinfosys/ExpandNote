@@ -3,8 +3,9 @@ import mammoth from 'mammoth';
 
 /**
  * Supported attachment types for text extraction
+ * Note: Only .docx is supported for Word documents (mammoth.js doesn't support legacy .doc format)
  */
-export type SupportedAttachmentType = 'application/pdf' | 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' | 'application/msword';
+export type SupportedAttachmentType = 'application/pdf' | 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
 /**
  * Processed attachment result
@@ -23,8 +24,7 @@ export interface ProcessedAttachment {
 export function isSupportedAttachment(contentType: string): boolean {
   const supportedTypes: SupportedAttachmentType[] = [
     'application/pdf',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
-    'application/msword', // .doc (older format)
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx only
   ];
   return supportedTypes.includes(contentType as SupportedAttachmentType);
 }
@@ -85,10 +85,7 @@ export async function processAttachment(
     // Extract text based on content type
     if (contentType === 'application/pdf') {
       result.content = await extractPdfText(buffer);
-    } else if (
-      contentType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-      contentType === 'application/msword'
-    ) {
+    } else if (contentType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
       result.content = await extractWordText(buffer);
     }
 

@@ -331,19 +331,36 @@ export async function POST(request: NextRequest) {
             continue;
           }
 
-          // Download the actual file content from the download URL
+          // Download the actual file content from the download URL with timeout protection
           if (attachmentData.download_url) {
-            const response = await fetch(attachmentData.download_url);
-            if (!response.ok) {
-              attachmentErrors.push(`${att.filename}: Failed to download (${response.status})`);
-              continue;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
+            try {
+              const response = await fetch(attachmentData.download_url, {
+                signal: controller.signal,
+              });
+              clearTimeout(timeoutId);
+
+              if (!response.ok) {
+                attachmentErrors.push(`${att.filename}: Failed to download (${response.status})`);
+                continue;
+              }
+              const buffer = Buffer.from(await response.arrayBuffer());
+              attachmentsWithContent.push({
+                filename: att.filename,
+                content_type: att.content_type,
+                content: buffer,
+              });
+            } catch (fetchError) {
+              clearTimeout(timeoutId);
+              if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+                console.error(`Download timed out for ${att.filename}`);
+                attachmentErrors.push(`${att.filename}: Download timed out`);
+                continue;
+              }
+              throw fetchError;
             }
-            const buffer = Buffer.from(await response.arrayBuffer());
-            attachmentsWithContent.push({
-              filename: att.filename,
-              content_type: att.content_type,
-              content: buffer,
-            });
           }
         } catch (error) {
           console.error(`Error fetching attachment ${att.filename}:`, error);
@@ -369,7 +386,7 @@ export async function POST(request: NextRequest) {
               .from('notes')
               .insert({
                 user_id: userSettings.user_id,
-                title: `${attachment.filename}`,
+                title: attachment.filename,
                 content: attachment.content,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
@@ -384,26 +401,41 @@ export async function POST(request: NextRequest) {
             }
 
             // Apply the same tags to the attachment note
+            // Use upsert to handle race conditions (same pattern as main email processing)
             if (tags.length > 0) {
               for (const tagName of tags) {
                 try {
-                  const { data: tag } = await supabase
+                  const { data: tag, error: tagError } = await supabase
                     .from('tags')
+                    .upsert(
+                      {
+                        user_id: userSettings.user_id,
+                        name: tagName,
+                      },
+                      {
+                        onConflict: 'user_id,name',
+                        ignoreDuplicates: false,
+                      }
+                    )
                     .select('id')
-                    .eq('user_id', userSettings.user_id)
-                    .eq('name', tagName)
                     .single();
 
-                  if (tag) {
-                    await supabase
-                      .from('note_tags')
-                      .insert({
-                        note_id: attachmentNote.id,
-                        tag_id: tag.id,
-                      });
+                  if (tagError) {
+                    console.error(`Failed to create/fetch tag ${tagName} for attachment:`, tagError);
+                    continue;
+                  }
+
+                  const { error: associationError } = await supabase
+                    .from('note_tags')
+                    .insert({
+                      note_id: attachmentNote.id,
+                      tag_id: tag.id,
+                    });
+
+                  if (associationError && associationError.code !== '23505') {
+                    console.error(`Failed to associate tag ${tagName} with attachment:`, associationError);
                   }
                 } catch (error) {
-                  // Ignore tag errors for attachments
                   console.error(`Failed to tag attachment note:`, error);
                 }
               }
