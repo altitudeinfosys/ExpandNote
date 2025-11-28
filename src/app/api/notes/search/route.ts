@@ -69,9 +69,31 @@ export async function GET(request: NextRequest) {
     // If we have a text search query, use the search_notes function instead
     let searchResults;
     if (query && query.trim().length > 0) {
+      // Determine the archive filter parameter
+      let filterArchived: boolean | null = null;
+      if (showTrash) {
+        filterArchived = null; // Don't filter by archived status in trash
+      } else if (showArchived) {
+        filterArchived = true; // Only archived notes
+      } else {
+        filterArchived = false; // Only non-archived notes
+      }
+
+      console.log('[Search] Calling RPC with:', {
+        search_query: query.trim(),
+        filter_archived: filterArchived,
+        showArchived,
+      });
+
       const { data: results, error } = await supabase.rpc('search_notes', {
         search_query: query.trim(),
         user_uuid: user.id,
+        filter_archived: filterArchived,
+      });
+
+      console.log('[Search] RPC results:', {
+        count: results?.length,
+        error: error?.message,
       });
 
       if (error) {
@@ -82,26 +104,12 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      // Filter RPC results by view (trash/archived/favorites)
-      // since search_notes function doesn't support these filters
+      // The search_notes function now filters by archived status at the database level
+      // We only need to filter by favorites if needed
       searchResults = results;
-      if (searchResults && searchResults.length > 0) {
-        if (showTrash) {
-          searchResults = searchResults.filter((note: { deleted_at: string | null }) => note.deleted_at !== null);
-        } else if (showArchived) {
-          searchResults = searchResults.filter((note: { deleted_at: string | null; is_archived: boolean }) =>
-            note.deleted_at === null && note.is_archived === true
-          );
-        } else {
-          // Default: non-deleted, non-archived notes
-          searchResults = searchResults.filter((note: { deleted_at: string | null; is_archived: boolean }) =>
-            note.deleted_at === null && note.is_archived === false
-          );
 
-          if (showFavorites) {
-            searchResults = searchResults.filter((note: { is_favorite: boolean }) => note.is_favorite === true);
-          }
-        }
+      if (searchResults && searchResults.length > 0 && showFavorites && !showTrash) {
+        searchResults = searchResults.filter((note: { is_favorite: boolean }) => note.is_favorite === true);
       }
     } else {
       // No text search, just get all notes matching the view filter
