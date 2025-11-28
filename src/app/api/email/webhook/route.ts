@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createServiceClient } from '@/lib/supabase/server';
 import { parseEmailContent, extractTagsFromSubject } from '@/lib/email/parser';
-import { MAX_CONTENT_SIZE_BYTES } from '@/lib/constants';
+import { processAttachments } from '@/lib/email/attachment-processor';
+import { MAX_CONTENT_SIZE_BYTES, MAX_ATTACHMENT_SIZE_BYTES } from '@/lib/constants';
 import { config } from '@/lib/config';
 
 /**
@@ -296,10 +297,168 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Process attachments if any
+    let attachmentNotesCreated = 0;
+    const attachmentErrors: string[] = [];
+
+    if (email.attachments && email.attachments.length > 0) {
+      console.log(`Processing ${email.attachments.length} attachment(s)`);
+
+      // Fetch attachment content for each supported attachment
+      // Resend API returns metadata with download_url, we need to fetch content separately
+      const attachmentsWithContent: Array<{ filename: string; content_type: string; content: string | Buffer }> = [];
+
+      for (const att of email.attachments) {
+        try {
+          // Check file size before downloading (Resend provides size in metadata)
+          if (att.size > MAX_ATTACHMENT_SIZE_BYTES) {
+            const sizeMB = (att.size / (1024 * 1024)).toFixed(1);
+            const limitMB = (MAX_ATTACHMENT_SIZE_BYTES / (1024 * 1024)).toFixed(0);
+            console.log(`Skipping attachment ${att.filename}: Too large (${sizeMB}MB > ${limitMB}MB limit)`);
+            attachmentErrors.push(`${att.filename}: File too large (${sizeMB}MB, limit is ${limitMB}MB)`);
+            continue;
+          }
+
+          // Fetch the attachment details which includes the download_url
+          const { data: attachmentData, error: attachmentFetchError } = await resend.attachments.receiving.get({
+            id: att.id,
+            emailId: email_id,
+          });
+
+          if (attachmentFetchError || !attachmentData) {
+            console.error(`Failed to fetch attachment ${att.filename}:`, attachmentFetchError);
+            attachmentErrors.push(`${att.filename}: Failed to fetch attachment details`);
+            continue;
+          }
+
+          // Download the actual file content from the download URL with timeout protection
+          if (attachmentData.download_url) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
+            try {
+              const response = await fetch(attachmentData.download_url, {
+                signal: controller.signal,
+              });
+              clearTimeout(timeoutId);
+
+              if (!response.ok) {
+                attachmentErrors.push(`${att.filename}: Failed to download (${response.status})`);
+                continue;
+              }
+              const buffer = Buffer.from(await response.arrayBuffer());
+              attachmentsWithContent.push({
+                filename: att.filename,
+                content_type: att.content_type,
+                content: buffer,
+              });
+            } catch (fetchError) {
+              clearTimeout(timeoutId);
+              if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+                console.error(`Download timed out for ${att.filename}`);
+                attachmentErrors.push(`${att.filename}: Download timed out`);
+                continue;
+              }
+              throw fetchError;
+            }
+          }
+        } catch (error) {
+          console.error(`Error fetching attachment ${att.filename}:`, error);
+          attachmentErrors.push(`${att.filename}: Error fetching attachment`);
+        }
+      }
+
+      const processedAttachments = await processAttachments(attachmentsWithContent);
+
+      for (const attachment of processedAttachments) {
+        if (attachment.success && attachment.content) {
+          try {
+            // Validate attachment content size
+            if (attachment.content.length > MAX_CONTENT_SIZE_BYTES) {
+              attachmentErrors.push(
+                `${attachment.filename}: Content too large (${attachment.content.length} bytes)`
+              );
+              continue;
+            }
+
+            // Create a new note for each attachment
+            const { data: attachmentNote, error: attachmentError } = await supabase
+              .from('notes')
+              .insert({
+                user_id: userSettings.user_id,
+                title: attachment.filename,
+                content: attachment.content,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+              .select()
+              .single();
+
+            if (attachmentError) {
+              console.error(`Failed to create note for ${attachment.filename}:`, attachmentError);
+              attachmentErrors.push(`${attachment.filename}: Failed to create note`);
+              continue;
+            }
+
+            // Apply the same tags to the attachment note
+            // Use upsert to handle race conditions (same pattern as main email processing)
+            if (tags.length > 0) {
+              for (const tagName of tags) {
+                try {
+                  const { data: tag, error: tagError } = await supabase
+                    .from('tags')
+                    .upsert(
+                      {
+                        user_id: userSettings.user_id,
+                        name: tagName,
+                      },
+                      {
+                        onConflict: 'user_id,name',
+                        ignoreDuplicates: false,
+                      }
+                    )
+                    .select('id')
+                    .single();
+
+                  if (tagError) {
+                    console.error(`Failed to create/fetch tag ${tagName} for attachment:`, tagError);
+                    continue;
+                  }
+
+                  const { error: associationError } = await supabase
+                    .from('note_tags')
+                    .insert({
+                      note_id: attachmentNote.id,
+                      tag_id: tag.id,
+                    });
+
+                  if (associationError && associationError.code !== '23505') {
+                    console.error(`Failed to associate tag ${tagName} with attachment:`, associationError);
+                  }
+                } catch (error) {
+                  console.error(`Failed to tag attachment note:`, error);
+                }
+              }
+            }
+
+            attachmentNotesCreated++;
+          } catch (error) {
+            console.error(`Error creating note for ${attachment.filename}:`, error);
+            attachmentErrors.push(`${attachment.filename}: Unexpected error`);
+          }
+        } else if (attachment.error) {
+          console.log(`Skipping attachment ${attachment.filename}: ${attachment.error}`);
+          attachmentErrors.push(`${attachment.filename}: ${attachment.error}`);
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       note_id: note.id,
       tags_created: tagsCreated,
+      attachments_processed: attachmentNotesCreated,
+      attachment_errors: attachmentErrors.length > 0 ? attachmentErrors : undefined,
       message: 'Note created successfully',
     });
 
