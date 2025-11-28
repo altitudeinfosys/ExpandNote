@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useNotes } from '@/hooks/useNotes';
 import { useTags } from '@/hooks/useTags';
+import { useNotesStore } from '@/stores/notesStore';
 import { NoteEditor } from '@/components/NoteEditor';
 import { SearchBar } from '@/components/SearchBar';
 
@@ -37,6 +38,9 @@ export default function DashboardPage() {
     deleteNoteById,
     searchNotes,
   } = useNotes();
+
+  // Get direct store access for optimistic updates
+  const { deleteNote: deleteNoteFromStore } = useNotesStore();
 
   const {
     selectedTagIds,
@@ -159,19 +163,40 @@ export default function DashboardPage() {
       const favoriteChanged = noteData.is_favorite !== selectedNote.is_favorite;
       const archivedChanged = noteData.is_archived !== selectedNote.is_archived;
 
-      // Close editor first if note is being archived from a non-archived view
-      // This ensures the note disappears immediately from the list
-      const shouldCloseEditor = archivedChanged && noteData.is_archived && currentView !== DASHBOARD_VIEWS.ARCHIVED;
+      // Optimistically remove note from list if being archived from non-archived view
+      // This provides instant UI feedback
+      const shouldRemoveFromList = archivedChanged && noteData.is_archived && currentView !== DASHBOARD_VIEWS.ARCHIVED;
 
-      if (shouldCloseEditor) {
+      if (shouldRemoveFromList) {
+        // Optimistically remove from local state for instant UI update
+        deleteNoteFromStore(selectedNote.id);
         handleCloseEditor();
       }
 
-      await updateNoteById(selectedNote.id, noteData);
+      try {
+        await updateNoteById(selectedNote.id, noteData);
 
-      // Refetch current view if favorite or archived status changed
-      // This ensures the list stays in sync when toggling favorites or archiving
-      if (favoriteChanged || archivedChanged) {
+        // Refetch current view if favorite or archived status changed
+        // This ensures the list stays in sync with the database
+        if (favoriteChanged || archivedChanged) {
+          switch (currentView) {
+            case DASHBOARD_VIEWS.FAVORITES:
+              await fetchNotes({ showFavorites: true });
+              break;
+            case DASHBOARD_VIEWS.ARCHIVED:
+              await fetchNotes({ showArchived: true });
+              break;
+            case DASHBOARD_VIEWS.TRASH:
+              await fetchNotes({ showTrash: true });
+              break;
+            default:
+              await fetchNotes();
+              break;
+          }
+        }
+      } catch (error) {
+        // If update failed, refetch to restore correct state
+        console.error('Failed to update note:', error);
         switch (currentView) {
           case DASHBOARD_VIEWS.FAVORITES:
             await fetchNotes({ showFavorites: true });
@@ -188,7 +213,7 @@ export default function DashboardPage() {
         }
       }
     },
-    [selectedNote, updateNoteById, currentView, fetchNotes, handleCloseEditor]
+    [selectedNote, updateNoteById, currentView, fetchNotes, handleCloseEditor, deleteNoteFromStore]
   );
 
   const handleDeleteNote = useCallback(
