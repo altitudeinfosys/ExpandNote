@@ -6,25 +6,29 @@ import { MAX_CONTENT_SIZE_BYTES } from '@/lib/constants';
 import { config } from '@/lib/config';
 
 /**
+ * Resend webhook event structure for email.received events
+ */
+interface ResendWebhookEvent {
+  type: 'email.received';
+  created_at: string;
+  data: {
+    email_id: string;
+    from: string;
+    to: string | string[];
+    subject?: string;
+  };
+}
+
+/**
  * POST /api/email/webhook
  * Webhook endpoint for Resend inbound emails
  *
  * This endpoint receives emails from Resend and creates notes for users.
  * Email addresses are in the format: u-{token}@{domain}
  *
- * Expected payload from Resend (webhook event):
- * {
- *   "type": "email.received",
- *   "created_at": "2024-02-22T23:41:12.126Z",
- *   "data": {
- *     "email_id": "uuid",
- *     "from": "sender@example.com",
- *     "to": ["u-abc123@domain"],
- *     "subject": "Note title #tag1 #tag2"
- *   }
- * }
- *
- * Note: Webhooks do NOT include the email body. We must fetch it using the Resend API.
+ * Security: Webhook signature verification required in production
+ * Idempotency: Duplicate email_id events return existing note
+ * Race Conditions: Atomic tag creation via upsert
  */
 export async function POST(request: NextRequest) {
   try {
@@ -92,11 +96,18 @@ export async function POST(request: NextRequest) {
       // Parse the event after verification
       parsedEvent = JSON.parse(payload);
     } else {
-      // No webhook secret - only allowed in development
+      // No webhook secret - only allowed in development (defense in depth)
+      if (process.env.NODE_ENV === 'production') {
+        // This should never happen due to check at line 52-58, but defense in depth
+        console.error('CRITICAL: Production deployment without RESEND_WEBHOOK_SECRET');
+        throw new Error('Production deployment missing RESEND_WEBHOOK_SECRET');
+      }
       console.warn('RESEND_WEBHOOK_SECRET not configured - skipping signature verification (DEVELOPMENT ONLY)');
       parsedEvent = await request.json();
     }
-    const event = parsedEvent;
+
+    // Type-safe event parsing
+    const event = parsedEvent as ResendWebhookEvent;
 
     // Validate event type
     if (event.type !== 'email.received') {
@@ -205,7 +216,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Extract tags from subject line
-    const tags = extractTagsFromSubject(subject);
+    const tags = extractTagsFromSubject(subject || '');
 
     // Create note (without tags - they'll be added via note_tags table)
     const { data: note, error: createError } = await supabase
