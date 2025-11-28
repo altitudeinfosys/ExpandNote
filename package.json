@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "type-check": "tsc --noEmit",
-    "test": "echo \"No tests yet\" && exit 0",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
     "validate-env": "node scripts/validate-env.js",
     "supabase:gen-types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > src/types/supabase.ts"
   },
@@ -16,6 +18,7 @@
     "@anthropic-ai/sdk": "^0.68.0",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.75.1",
+    "html-to-text": "^9.0.5",
     "next": "15.5.6",
     "openai": "^6.8.1",
     "react": "19.1.0",
@@ -24,18 +27,25 @@
     "react-markdown": "^10.1.0",
     "rehype-highlight": "^7.0.2",
     "remark-gfm": "^4.0.1",
+    "resend": "^6.3.0-canary.4",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@types/html-to-text": "^9.0.4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/ui": "^4.0.13",
     "eslint": "^9",
     "eslint-config-next": "15.5.6",
+    "jsdom": "^27.2.0",
     "tailwindcss": "^4",
     "to-ico": "^1.1.5",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.0.13"
   }
 }

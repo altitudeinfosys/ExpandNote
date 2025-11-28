@@ -14,6 +14,8 @@ type UserSettings = {
   enable_auto_tagging: boolean;
   default_sort: string;
   theme: 'light' | 'dark';
+  email_to_note_enabled?: boolean;
+  email_to_note_address?: string | null;
 };
 
 type AIProfile = {
@@ -41,13 +43,13 @@ function SettingsContent() {
   const [profiles, setProfiles] = useState<AIProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeSection, setActiveSection] = useState<'account' | 'ai-config' | 'ai-profiles' | 'tags' | 'app-settings'>('account');
+  const [activeSection, setActiveSection] = useState<'account' | 'ai-config' | 'ai-profiles' | 'tags' | 'email-to-note' | 'app-settings'>('account');
 
   // Handle section from URL query parameter
   useEffect(() => {
     const section = searchParams.get('section');
-    if (section && ['account', 'ai-config', 'ai-profiles', 'tags', 'app-settings'].includes(section)) {
-      setActiveSection(section as 'account' | 'ai-config' | 'ai-profiles' | 'tags' | 'app-settings');
+    if (section && ['account', 'ai-config', 'ai-profiles', 'tags', 'email-to-note', 'app-settings'].includes(section)) {
+      setActiveSection(section as 'account' | 'ai-config' | 'ai-profiles' | 'tags' | 'email-to-note' | 'app-settings');
     }
   }, [searchParams]);
 
@@ -56,6 +58,12 @@ function SettingsContent() {
   const [claudeKey, setClaudeKey] = useState('');
   const [openrouterKey, setOpenrouterKey] = useState('');
   const [defaultProvider, setDefaultProvider] = useState<'openai' | 'claude' | 'openrouter'>('openai');
+
+  // Email-to-note state
+  const [emailToNoteEnabled, setEmailToNoteEnabled] = useState(false);
+  const [emailToNoteAddress, setEmailToNoteAddress] = useState<string | null>(null);
+  const [emailToNoteLoading, setEmailToNoteLoading] = useState(false);
+  const [copiedToClipboard, setCopiedToClipboard] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -93,6 +101,8 @@ function SettingsContent() {
         setClaudeKey(data.claude_api_key || '');
         setOpenrouterKey(data.openrouter_api_key || '');
         setDefaultProvider(data.default_ai_provider || 'openai');
+        setEmailToNoteEnabled(data.email_to_note_enabled || false);
+        setEmailToNoteAddress(data.email_to_note_address || null);
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -180,6 +190,90 @@ function SettingsContent() {
       }
     } catch (error) {
       console.error('Error toggling profile:', error);
+    }
+  };
+
+  // Email-to-note functions
+  const enableEmailToNote = async () => {
+    setEmailToNoteLoading(true);
+    try {
+      const response = await fetch('/api/settings/email-to-note/enable', {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setEmailToNoteEnabled(true);
+        setEmailToNoteAddress(data.email_address);
+        alert('Email-to-note enabled successfully!');
+      } else {
+        alert('Failed to enable email-to-note');
+      }
+    } catch (error) {
+      console.error('Error enabling email-to-note:', error);
+      alert('Error enabling email-to-note');
+    } finally {
+      setEmailToNoteLoading(false);
+    }
+  };
+
+  const disableEmailToNote = async () => {
+    if (!confirm('Are you sure you want to disable email-to-note? Your email address will be preserved for future use.')) return;
+
+    setEmailToNoteLoading(true);
+    try {
+      const response = await fetch('/api/settings/email-to-note/disable', {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        setEmailToNoteEnabled(false);
+        alert('Email-to-note disabled successfully!');
+      } else {
+        alert('Failed to disable email-to-note');
+      }
+    } catch (error) {
+      console.error('Error disabling email-to-note:', error);
+      alert('Error disabling email-to-note');
+    } finally {
+      setEmailToNoteLoading(false);
+    }
+  };
+
+  const regenerateEmailAddress = async () => {
+    if (!confirm('Are you sure you want to regenerate your email address? The old address will stop working immediately.')) return;
+
+    setEmailToNoteLoading(true);
+    try {
+      const response = await fetch('/api/settings/email-to-note/regenerate', {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setEmailToNoteAddress(data.email_address);
+        alert('Email address regenerated successfully!');
+      } else {
+        alert('Failed to regenerate email address');
+      }
+    } catch (error) {
+      console.error('Error regenerating email address:', error);
+      alert('Error regenerating email address');
+    } finally {
+      setEmailToNoteLoading(false);
+    }
+  };
+
+  const copyEmailAddress = async () => {
+    if (!emailToNoteAddress) return;
+
+    try {
+      await navigator.clipboard.writeText(emailToNoteAddress);
+      setCopiedToClipboard(true);
+      setTimeout(() => setCopiedToClipboard(false), 2000);
+    } catch (error) {
+      console.error('Error copying to clipboard:', error);
+      alert('Failed to copy email address');
     }
   };
 
@@ -281,6 +375,19 @@ function SettingsContent() {
                   >
                     <span className="material-symbols-outlined text-lg sm:text-xl">label</span>
                     <span className="font-medium text-sm sm:text-base">Tags</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => setActiveSection('email-to-note')}
+                    className={`w-full text-left px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-colors flex items-center gap-2 sm:gap-3 ${
+                      activeSection === 'email-to-note'
+                        ? 'bg-primary text-white'
+                        : 'text-[var(--foreground)] hover:bg-[var(--background)]'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-lg sm:text-xl">email</span>
+                    <span className="font-medium text-sm sm:text-base">Email to Note</span>
                   </button>
                 </li>
                 <li>
@@ -533,6 +640,117 @@ function SettingsContent() {
                         <span>Manage Tags</span>
                       </button>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Email to Note Section */}
+              {activeSection === 'email-to-note' && (
+                <div>
+                  <h2 className="text-xl font-semibold text-[var(--foreground)] mb-6">Email to Note</h2>
+                  <div className="space-y-6">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                      <div className="flex gap-3">
+                        <span className="material-symbols-outlined text-blue-600 dark:text-blue-400">info</span>
+                        <div className="flex-1">
+                          <h3 className="font-medium text-blue-900 dark:text-blue-200 mb-1">How it works</h3>
+                          <p className="text-sm text-blue-800 dark:text-blue-300">
+                            Send an email to your unique address and it will automatically create a note.
+                            Add #hashtags in the subject line to auto-tag your notes.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {!emailToNoteEnabled ? (
+                      <div>
+                        <p className="text-[var(--foreground-secondary)] mb-4">
+                          Enable email-to-note to get a unique email address that creates notes automatically.
+                        </p>
+                        <button
+                          onClick={enableEmailToNote}
+                          disabled={emailToNoteLoading}
+                          className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center gap-2"
+                        >
+                          <span className="material-symbols-outlined">mail</span>
+                          <span>{emailToNoteLoading ? 'Enabling...' : 'Enable Email to Note'}</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                            Your Email Address
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={emailToNoteAddress || ''}
+                              readOnly
+                              className="flex-1 px-4 py-3 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--foreground)] font-mono text-sm"
+                            />
+                            <button
+                              onClick={copyEmailAddress}
+                              className="px-4 py-3 border border-[var(--border)] text-[var(--foreground)] rounded-lg hover:bg-[var(--background)] transition-colors flex items-center gap-2"
+                              title="Copy to clipboard"
+                            >
+                              <span className="material-symbols-outlined">
+                                {copiedToClipboard ? 'check' : 'content_copy'}
+                              </span>
+                              <span className="hidden sm:inline">{copiedToClipboard ? 'Copied!' : 'Copy'}</span>
+                            </button>
+                          </div>
+                          <p className="mt-2 text-sm text-[var(--foreground-secondary)]">
+                            Send emails to this address to create notes automatically
+                          </p>
+                        </div>
+
+                        <div className="pt-4 border-t border-[var(--border)] space-y-3">
+                          <button
+                            onClick={regenerateEmailAddress}
+                            disabled={emailToNoteLoading}
+                            className="px-4 py-2 border border-[var(--border)] text-[var(--foreground)] rounded-lg hover:bg-[var(--background)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                          >
+                            <span className="material-symbols-outlined">refresh</span>
+                            <span>{emailToNoteLoading ? 'Regenerating...' : 'Regenerate Email Address'}</span>
+                          </button>
+
+                          <button
+                            onClick={disableEmailToNote}
+                            disabled={emailToNoteLoading}
+                            className="px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                          >
+                            <span className="material-symbols-outlined">block</span>
+                            <span>{emailToNoteLoading ? 'Disabling...' : 'Disable Email to Note'}</span>
+                          </button>
+                        </div>
+
+                        <div className="mt-6 p-4 bg-[var(--background)] border border-[var(--border)] rounded-lg">
+                          <h4 className="font-medium text-[var(--foreground)] mb-3 flex items-center gap-2">
+                            <span className="material-symbols-outlined">tips_and_updates</span>
+                            <span>Usage Tips</span>
+                          </h4>
+                          <ul className="space-y-2 text-sm text-[var(--foreground-secondary)]">
+                            <li className="flex gap-2">
+                              <span>•</span>
+                              <span>Email subject becomes the note title</span>
+                            </li>
+                            <li className="flex gap-2">
+                              <span>•</span>
+                              <span>Add #tags in the subject line (e.g., &quot;Meeting notes #work #important&quot;)</span>
+                            </li>
+                            <li className="flex gap-2">
+                              <span>•</span>
+                              <span>Email signatures are automatically removed</span>
+                            </li>
+                            <li className="flex gap-2">
+                              <span>•</span>
+                              <span>Maximum 5 tags per note</span>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

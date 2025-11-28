@@ -113,19 +113,62 @@ Vercel will auto-detect these settings (already configured in `vercel.json`):
 
 ### Production Environment Variables
 
+All these variables must be added to Vercel (Project Settings → Environment Variables):
+
+#### Required for All Deployments
+
 ```env
+# Supabase Configuration (Public - Client & Server)
 NEXT_PUBLIC_SUPABASE_URL=https://dtgxsrpxxdhzjaxevhwp.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0Z3hzcnB4eGRoempheGV2aHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA4ODAwMzUsImV4cCI6MjA3NjQ1NjAzNX0.uyJBDnVtXLgLU1kYRI3kUa9mTFMpcG5TmZzfaSkgcbY
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+# Supabase Service Role (Secret - Server Only)
+# Required for webhooks and server-side operations that bypass RLS
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+# API Key Encryption (Secret - Server Only)
+# Required for encrypting user API keys stored in database
+API_KEY_ENCRYPTION_KEY=base64_encoded_32_byte_key
 ```
 
-### Optional Future Variables
-
-When you implement AI features, you'll need to add:
+#### Required for Email-to-Note Feature
 
 ```env
-# These will be stored in user_settings table, not in Vercel env vars
-# Users will provide their own API keys via the app settings
+# Resend Email Service (Secret - Server Only)
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+RESEND_EMAIL_DOMAIN=expandnote.com
+RESEND_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
+
+### How to Get These Values
+
+| Variable | Where to Find |
+|----------|---------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Dashboard → Project Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Dashboard → Project Settings → API (anon/public key) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Dashboard → Project Settings → API (service_role key) ⚠️ Keep secret |
+| `API_KEY_ENCRYPTION_KEY` | Generate with: `openssl rand -base64 32` |
+| `RESEND_API_KEY` | Resend Dashboard → API Keys → https://resend.com/api-keys |
+| `RESEND_EMAIL_DOMAIN` | Your verified domain in Resend (e.g., `expandnote.com`) |
+| `RESEND_WEBHOOK_SECRET` | Resend Dashboard → Webhooks → Create webhook → Copy secret |
+
+### Environment Variable Configuration in Vercel
+
+1. Go to your Vercel project → **Settings** → **Environment Variables**
+2. Add each variable above
+3. Select environments: **Production**, **Preview**, and **Development** (all three)
+4. Mark all variables except `NEXT_PUBLIC_*` as **sensitive** (hidden in logs)
+5. Click **Save**
+6. **Redeploy** your project for changes to take effect
+
+### AI Service Keys (User-Provided)
+
+The following API keys are **NOT** configured in Vercel:
+- OpenAI API keys
+- Anthropic API keys
+- OpenRouter API keys
+
+These are provided by individual users through the app settings UI and stored encrypted in the database using `API_KEY_ENCRYPTION_KEY`.
 
 ---
 
