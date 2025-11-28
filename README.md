@@ -46,11 +46,23 @@ npm install
 cp .env.local.example .env.local
 ```
 
-Edit `.env.local` and add your Supabase credentials:
-```
+Edit `.env.local` and configure required variables (see `.env.local.example` for complete list):
+```env
+# Required - Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+# Required - Security
+API_KEY_ENCRYPTION_KEY=generate_with_openssl_rand_base64_32
+
+# Optional - Email-to-Note Feature
+RESEND_API_KEY=your_resend_api_key
+RESEND_EMAIL_DOMAIN=your_domain
+RESEND_WEBHOOK_SECRET=your_webhook_secret
 ```
+
+See [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md) for detailed environment variable documentation.
 
 4. Set up the database:
    - Go to your Supabase project dashboard
