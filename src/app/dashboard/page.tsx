@@ -163,9 +163,14 @@ export default function DashboardPage() {
       const favoriteChanged = noteData.is_favorite !== selectedNote.is_favorite;
       const archivedChanged = noteData.is_archived !== selectedNote.is_archived;
 
-      // Optimistically remove note from list if being archived from non-archived view
+      // Optimistically remove note from list if:
+      // 1. Archiving from non-archived view, OR
+      // 2. Unarchiving from archived view
       // This provides instant UI feedback
-      const shouldRemoveFromList = archivedChanged && noteData.is_archived && currentView !== DASHBOARD_VIEWS.ARCHIVED;
+      const shouldRemoveFromList = archivedChanged && (
+        (noteData.is_archived && currentView !== DASHBOARD_VIEWS.ARCHIVED) ||
+        (!noteData.is_archived && currentView === DASHBOARD_VIEWS.ARCHIVED)
+      );
 
       if (shouldRemoveFromList) {
         // Optimistically remove from local state for instant UI update

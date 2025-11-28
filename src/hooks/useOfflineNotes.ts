@@ -24,16 +24,36 @@ export function useOfflineNotes(userId: string | null) {
   } = useNotesStore();
 
   // Fetch notes from IndexedDB
-  const fetchNotes = useCallback(async () => {
+  const fetchNotes = useCallback(async (options?: {
+    showArchived?: boolean;
+    showFavorites?: boolean;
+    showTrash?: boolean;
+  }) => {
     if (!userId) return;
 
-    console.log('[useOfflineNotes] fetchNotes called', { userId });
+    console.log('[useOfflineNotes] fetchNotes called', { userId, options });
     setLoading(true);
     setError(null);
 
     try {
-      const offlineNotes = await noteOps.getAllNotes(userId);
+      let offlineNotes = await noteOps.getAllNotes(userId);
       console.log('[useOfflineNotes] Fetched notes from IndexedDB', { count: offlineNotes.length });
+
+      // Apply view filters (mutually exclusive: trash > archived > favorites > all)
+      if (options?.showTrash) {
+        offlineNotes = offlineNotes.filter(n => n.deleted_at !== null);
+      } else if (options?.showArchived) {
+        offlineNotes = offlineNotes.filter(n => n.is_archived === true && n.deleted_at === null);
+      } else {
+        // Default: non-deleted, non-archived notes
+        offlineNotes = offlineNotes.filter(n => n.is_archived === false && n.deleted_at === null);
+
+        if (options?.showFavorites) {
+          offlineNotes = offlineNotes.filter(n => n.is_favorite === true);
+        }
+      }
+
+      console.log('[useOfflineNotes] After filtering', { count: offlineNotes.length, filter: options });
 
       // Fetch tags for each note
       const notesWithTags = await Promise.all(
@@ -210,7 +230,12 @@ export function useOfflineNotes(userId: string | null) {
 
   // Search notes locally
   const searchNotes = useCallback(
-    async (query: string, filters?: { tagIds?: string[] }) => {
+    async (query: string, filters?: {
+      tagIds?: string[];
+      showArchived?: boolean;
+      showFavorites?: boolean;
+      showTrash?: boolean;
+    }) => {
       if (!userId) return;
 
       setLoading(true);
@@ -218,7 +243,21 @@ export function useOfflineNotes(userId: string | null) {
 
       try {
         // Get all notes from IndexedDB
-        const allNotes = await noteOps.getAllNotes(userId);
+        let allNotes = await noteOps.getAllNotes(userId);
+
+        // Apply view filters first (mutually exclusive: trash > archived > favorites > all)
+        if (filters?.showTrash) {
+          allNotes = allNotes.filter(n => n.deleted_at !== null);
+        } else if (filters?.showArchived) {
+          allNotes = allNotes.filter(n => n.is_archived === true && n.deleted_at === null);
+        } else {
+          // Default: non-deleted, non-archived notes
+          allNotes = allNotes.filter(n => n.is_archived === false && n.deleted_at === null);
+
+          if (filters?.showFavorites) {
+            allNotes = allNotes.filter(n => n.is_favorite === true);
+          }
+        }
 
         let filteredNotes = allNotes;
 

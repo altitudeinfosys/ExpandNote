@@ -20,6 +20,9 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get('q');
     const tagIds = searchParams.getAll('tagId');
+    const showArchived = searchParams.get('archived') === 'true';
+    const showFavorites = searchParams.get('favorites') === 'true';
+    const showTrash = searchParams.get('trash') === 'true';
 
     // Either a search query or tag IDs must be provided
     if ((!query || query.trim().length === 0) && tagIds.length === 0) {
@@ -41,13 +44,27 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Initial query to get all non-deleted notes (including archived)
-    // Note: Archived notes still appear in tag searches as per requirements
-    const initialQuery = supabase
+    // Build initial query based on view filters
+    // Mutually exclusive: trash > archived > favorites > all
+    let initialQuery = supabase
       .from('notes')
       .select('*')
-      .eq('user_id', user.id)
-      .is('deleted_at', null);
+      .eq('user_id', user.id);
+
+    if (showTrash) {
+      // Show only deleted notes
+      initialQuery = initialQuery.not('deleted_at', 'is', null);
+    } else if (showArchived) {
+      // Show only archived, non-deleted notes
+      initialQuery = initialQuery.is('deleted_at', null).eq('is_archived', true);
+    } else {
+      // Default: show only non-deleted, non-archived notes
+      initialQuery = initialQuery.is('deleted_at', null).eq('is_archived', false);
+
+      if (showFavorites) {
+        initialQuery = initialQuery.eq('is_favorite', true);
+      }
+    }
 
     // If we have a text search query, use the search_notes function instead
     let searchResults;
@@ -64,9 +81,30 @@ export async function GET(request: NextRequest) {
           { status: 500 }
         );
       }
+
+      // Filter RPC results by view (trash/archived/favorites)
+      // since search_notes function doesn't support these filters
       searchResults = results;
+      if (searchResults && searchResults.length > 0) {
+        if (showTrash) {
+          searchResults = searchResults.filter((note: { deleted_at: string | null }) => note.deleted_at !== null);
+        } else if (showArchived) {
+          searchResults = searchResults.filter((note: { deleted_at: string | null; is_archived: boolean }) =>
+            note.deleted_at === null && note.is_archived === true
+          );
+        } else {
+          // Default: non-deleted, non-archived notes
+          searchResults = searchResults.filter((note: { deleted_at: string | null; is_archived: boolean }) =>
+            note.deleted_at === null && note.is_archived === false
+          );
+
+          if (showFavorites) {
+            searchResults = searchResults.filter((note: { is_favorite: boolean }) => note.is_favorite === true);
+          }
+        }
+      }
     } else {
-      // No text search, just get all non-deleted notes
+      // No text search, just get all notes matching the view filter
       const { data: allNotes, error } = await initialQuery;
       if (error) {
         console.error('Error fetching notes:', error);
