@@ -177,8 +177,8 @@ export default function DashboardPage() {
         await updateNoteById(selectedNote.id, noteData);
 
         // Refetch current view if favorite or archived status changed
-        // This ensures the list stays in sync with the database
-        if (favoriteChanged || archivedChanged) {
+        // Skip refetch if we optimistically removed the note (it's already gone from UI)
+        if ((favoriteChanged || archivedChanged) && !shouldRemoveFromList) {
           switch (currentView) {
             case DASHBOARD_VIEWS.FAVORITES:
               await fetchNotes({ showFavorites: true });
@@ -195,21 +195,23 @@ export default function DashboardPage() {
           }
         }
       } catch (error) {
-        // If update failed, refetch to restore correct state
+        // If update failed and we did an optimistic update, refetch to restore correct state
         console.error('Failed to update note:', error);
-        switch (currentView) {
-          case DASHBOARD_VIEWS.FAVORITES:
-            await fetchNotes({ showFavorites: true });
-            break;
-          case DASHBOARD_VIEWS.ARCHIVED:
-            await fetchNotes({ showArchived: true });
-            break;
-          case DASHBOARD_VIEWS.TRASH:
-            await fetchNotes({ showTrash: true });
-            break;
-          default:
-            await fetchNotes();
-            break;
+        if (shouldRemoveFromList || favoriteChanged || archivedChanged) {
+          switch (currentView) {
+            case DASHBOARD_VIEWS.FAVORITES:
+              await fetchNotes({ showFavorites: true });
+              break;
+            case DASHBOARD_VIEWS.ARCHIVED:
+              await fetchNotes({ showArchived: true });
+              break;
+            case DASHBOARD_VIEWS.TRASH:
+              await fetchNotes({ showTrash: true });
+              break;
+            default:
+              await fetchNotes();
+              break;
+          }
         }
       }
     },
