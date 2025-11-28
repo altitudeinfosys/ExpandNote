@@ -3,7 +3,7 @@ import { Resend } from 'resend';
 import { createServiceClient } from '@/lib/supabase/server';
 import { parseEmailContent, extractTagsFromSubject } from '@/lib/email/parser';
 import { processAttachments } from '@/lib/email/attachment-processor';
-import { MAX_CONTENT_SIZE_BYTES } from '@/lib/constants';
+import { MAX_CONTENT_SIZE_BYTES, MAX_ATTACHMENT_SIZE_BYTES } from '@/lib/constants';
 import { config } from '@/lib/config';
 
 /**
@@ -310,6 +310,15 @@ export async function POST(request: NextRequest) {
 
       for (const att of email.attachments) {
         try {
+          // Check file size before downloading (Resend provides size in metadata)
+          if (att.size > MAX_ATTACHMENT_SIZE_BYTES) {
+            const sizeMB = (att.size / (1024 * 1024)).toFixed(1);
+            const limitMB = (MAX_ATTACHMENT_SIZE_BYTES / (1024 * 1024)).toFixed(0);
+            console.log(`Skipping attachment ${att.filename}: Too large (${sizeMB}MB > ${limitMB}MB limit)`);
+            attachmentErrors.push(`${att.filename}: File too large (${sizeMB}MB, limit is ${limitMB}MB)`);
+            continue;
+          }
+
           // Fetch the attachment details which includes the download_url
           const { data: attachmentData, error: attachmentFetchError } = await resend.attachments.receiving.get({
             id: att.id,

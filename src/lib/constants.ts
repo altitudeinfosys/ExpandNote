@@ -7,6 +7,9 @@ export const MAX_CONTENT_SIZE_BYTES = 1024 * 1024; // 1MB
 export const MAX_TITLE_LENGTH = 500; // characters
 export const MAX_TAGS_PER_NOTE = 5;
 
+// Attachment constraints
+export const MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+
 // Auto-save configuration
 export const AUTO_SAVE_DELAY_MS = 2000; // 2 seconds
 
