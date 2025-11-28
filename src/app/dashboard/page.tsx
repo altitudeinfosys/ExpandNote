@@ -159,6 +159,14 @@ export default function DashboardPage() {
       const favoriteChanged = noteData.is_favorite !== selectedNote.is_favorite;
       const archivedChanged = noteData.is_archived !== selectedNote.is_archived;
 
+      // Close editor first if note is being archived from a non-archived view
+      // This ensures the note disappears immediately from the list
+      const shouldCloseEditor = archivedChanged && noteData.is_archived && currentView !== DASHBOARD_VIEWS.ARCHIVED;
+
+      if (shouldCloseEditor) {
+        handleCloseEditor();
+      }
+
       await updateNoteById(selectedNote.id, noteData);
 
       // Refetch current view if favorite or archived status changed
@@ -166,23 +174,18 @@ export default function DashboardPage() {
       if (favoriteChanged || archivedChanged) {
         switch (currentView) {
           case DASHBOARD_VIEWS.FAVORITES:
-            fetchNotes({ showFavorites: true });
+            await fetchNotes({ showFavorites: true });
             break;
           case DASHBOARD_VIEWS.ARCHIVED:
-            fetchNotes({ showArchived: true });
+            await fetchNotes({ showArchived: true });
             break;
           case DASHBOARD_VIEWS.TRASH:
-            fetchNotes({ showTrash: true });
+            await fetchNotes({ showTrash: true });
             break;
           default:
-            fetchNotes();
+            await fetchNotes();
             break;
         }
-      }
-
-      // If note was archived while viewing from main list, close editor
-      if (archivedChanged && noteData.is_archived && currentView === DASHBOARD_VIEWS.ALL_NOTES) {
-        handleCloseEditor();
       }
     },
     [selectedNote, updateNoteById, currentView, fetchNotes, handleCloseEditor]
