@@ -211,9 +211,11 @@ export default function DashboardPage() {
 
   const handleSearch = useCallback(
     (query: string) => {
-      if (currentView === DASHBOARD_VIEWS.TRASH || currentView === DASHBOARD_VIEWS.ARCHIVED) return;
+      if (currentView === DASHBOARD_VIEWS.TRASH) return;
       searchNotes(query, {
-        tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined
+        tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined,
+        showArchived: currentView === DASHBOARD_VIEWS.ARCHIVED,
+        showFavorites: currentView === DASHBOARD_VIEWS.FAVORITES,
       });
     },
     [searchNotes, selectedTagIds, currentView]
@@ -444,7 +446,11 @@ export default function DashboardPage() {
                       if (selectedTagIds.includes(tag.id)) {
                         clearTagSelection();
                       } else {
-                        searchNotes('', { tagIds: [tag.id] });
+                        searchNotes('', {
+                          tagIds: [tag.id],
+                          showArchived: currentView === DASHBOARD_VIEWS.ARCHIVED,
+                          showFavorites: currentView === DASHBOARD_VIEWS.FAVORITES,
+                        });
                       }
                     }}
                     className={`
@@ -553,7 +559,7 @@ export default function DashboardPage() {
             `}
           >
             {/* Search Bar */}
-            {currentView !== DASHBOARD_VIEWS.TRASH && currentView !== DASHBOARD_VIEWS.ARCHIVED && (
+            {currentView !== DASHBOARD_VIEWS.TRASH && (
               <div className="p-4 border-b border-[var(--border)]">
                 <SearchBar key={currentView} onSearch={handleSearch} />
               </div>

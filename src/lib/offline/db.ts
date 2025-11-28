@@ -9,7 +9,7 @@ import { Note, Tag, SyncStatus } from '@/types';
 
 // Database configuration
 const DB_NAME = 'expandnote_db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 // Store (table) names
 export const STORES = {
@@ -40,14 +40,28 @@ export function initDB(): Promise<IDBDatabase> {
       // Handle database upgrade (called when DB is first created or version changes)
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
+        const oldVersion = event.oldVersion;
+        const transaction = (event.target as IDBOpenDBRequest).transaction!;
 
-        // Create Notes store
-        if (!db.objectStoreNames.contains(STORES.NOTES)) {
-          const notesStore = db.createObjectStore(STORES.NOTES, { keyPath: 'id' });
-          notesStore.createIndex('user_id', 'user_id', { unique: false });
-          notesStore.createIndex('updated_at', 'updated_at', { unique: false });
-          notesStore.createIndex('deleted_at', 'deleted_at', { unique: false });
-          notesStore.createIndex('sync_version', 'sync_version', { unique: false });
+        // Version 1: Initial schema
+        if (oldVersion < 1) {
+          // Create Notes store
+          if (!db.objectStoreNames.contains(STORES.NOTES)) {
+            const notesStore = db.createObjectStore(STORES.NOTES, { keyPath: 'id' });
+            notesStore.createIndex('user_id', 'user_id', { unique: false });
+            notesStore.createIndex('updated_at', 'updated_at', { unique: false });
+            notesStore.createIndex('deleted_at', 'deleted_at', { unique: false });
+            notesStore.createIndex('sync_version', 'sync_version', { unique: false });
+            notesStore.createIndex('is_archived', 'is_archived', { unique: false });
+          }
+        }
+
+        // Version 2: Add is_archived index for existing databases
+        if (oldVersion >= 1 && oldVersion < 2) {
+          const notesStore = transaction.objectStore(STORES.NOTES);
+          if (!notesStore.indexNames.contains('is_archived')) {
+            notesStore.createIndex('is_archived', 'is_archived', { unique: false });
+          }
         }
 
         // Create Tags store

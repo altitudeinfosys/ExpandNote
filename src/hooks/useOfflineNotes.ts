@@ -74,6 +74,7 @@ export function useOfflineNotes(userId: string | null) {
       title: string | null;
       content: string;
       is_favorite?: boolean;
+      is_archived?: boolean;
       tagIds?: string[];
     }) => {
       if (!userId) throw new Error('User not authenticated');
@@ -87,6 +88,7 @@ export function useOfflineNotes(userId: string | null) {
           title: noteData.title,
           content: noteData.content,
           is_favorite: noteData.is_favorite || false,
+          is_archived: noteData.is_archived || false,
           created_at: now,
           updated_at: now,
           deleted_at: null,
@@ -128,6 +130,7 @@ export function useOfflineNotes(userId: string | null) {
         title?: string | null;
         content?: string;
         is_favorite?: boolean;
+        is_archived?: boolean;
         tagIds?: string[];
       }
     ) => {
@@ -147,6 +150,7 @@ export function useOfflineNotes(userId: string | null) {
           title: updates.title !== undefined ? updates.title : existingNote.title,
           content: updates.content !== undefined ? updates.content : existingNote.content,
           is_favorite: updates.is_favorite !== undefined ? updates.is_favorite : existingNote.is_favorite,
+          is_archived: updates.is_archived !== undefined ? updates.is_archived : existingNote.is_archived,
           updated_at: new Date().toISOString(),
           sync_version: existingNote.sync_version + 1,
         };
