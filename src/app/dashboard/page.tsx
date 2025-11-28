@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useNotes } from '@/hooks/useNotes';
 import { useTags } from '@/hooks/useTags';
+import { useNotesStore } from '@/stores/notesStore';
 import { NoteEditor } from '@/components/NoteEditor';
 import { SearchBar } from '@/components/SearchBar';
 
@@ -13,11 +14,12 @@ import { SearchBar } from '@/components/SearchBar';
 const MOBILE_BREAKPOINT = 768;
 
 // View types
-type DashboardView = 'all-notes' | 'favorites' | 'trash';
+type DashboardView = 'all-notes' | 'favorites' | 'archived' | 'trash';
 
 const DASHBOARD_VIEWS = {
   ALL_NOTES: 'all-notes' as const,
   FAVORITES: 'favorites' as const,
+  ARCHIVED: 'archived' as const,
   TRASH: 'trash' as const,
 };
 
@@ -36,6 +38,9 @@ export default function DashboardPage() {
     deleteNoteById,
     searchNotes,
   } = useNotes();
+
+  // Get direct store access for optimistic updates
+  const { deleteNote: deleteNoteFromStore } = useNotesStore();
 
   const {
     selectedTagIds,
@@ -96,6 +101,7 @@ export default function DashboardPage() {
         title: null,
         content: '',
         is_favorite: false,
+        is_archived: false,
       });
       setSelectedNoteId(newNote.id);
       setShowEditor(true);
@@ -110,7 +116,13 @@ export default function DashboardPage() {
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      await fetchNotes(currentView === DASHBOARD_VIEWS.TRASH ? { showTrash: true } : undefined);
+      if (currentView === DASHBOARD_VIEWS.TRASH) {
+        await fetchNotes({ showTrash: true });
+      } else if (currentView === DASHBOARD_VIEWS.ARCHIVED) {
+        await fetchNotes({ showArchived: true });
+      } else {
+        await fetchNotes();
+      }
     } catch (error) {
       console.error('Failed to refresh notes:', error);
     } finally {
@@ -143,31 +155,72 @@ export default function DashboardPage() {
       title: string | null;
       content: string;
       is_favorite: boolean;
+      is_archived: boolean;
     }) => {
       if (!selectedNote) return;
 
-      // Check if favorite status changed
+      // Check if favorite or archived status changed
       const favoriteChanged = noteData.is_favorite !== selectedNote.is_favorite;
+      const archivedChanged = noteData.is_archived !== selectedNote.is_archived;
 
-      await updateNoteById(selectedNote.id, noteData);
+      // Optimistically remove note from list if:
+      // 1. Archiving from non-archived view, OR
+      // 2. Unarchiving from archived view
+      // This provides instant UI feedback
+      const shouldRemoveFromList = archivedChanged && (
+        (noteData.is_archived && currentView !== DASHBOARD_VIEWS.ARCHIVED) ||
+        (!noteData.is_archived && currentView === DASHBOARD_VIEWS.ARCHIVED)
+      );
 
-      // Refetch current view if favorite status changed
-      // This ensures the list stays in sync when toggling favorites
-      if (favoriteChanged) {
-        switch (currentView) {
-          case DASHBOARD_VIEWS.FAVORITES:
-            fetchNotes({ showFavorites: true });
-            break;
-          case DASHBOARD_VIEWS.TRASH:
-            fetchNotes({ showTrash: true });
-            break;
-          default:
-            fetchNotes();
-            break;
+      if (shouldRemoveFromList) {
+        // Optimistically remove from local state for instant UI update
+        deleteNoteFromStore(selectedNote.id);
+        handleCloseEditor();
+      }
+
+      try {
+        await updateNoteById(selectedNote.id, noteData);
+
+        // Refetch current view if favorite or archived status changed
+        // Skip refetch if we optimistically removed the note (it's already gone from UI)
+        if ((favoriteChanged || archivedChanged) && !shouldRemoveFromList) {
+          switch (currentView) {
+            case DASHBOARD_VIEWS.FAVORITES:
+              await fetchNotes({ showFavorites: true });
+              break;
+            case DASHBOARD_VIEWS.ARCHIVED:
+              await fetchNotes({ showArchived: true });
+              break;
+            case DASHBOARD_VIEWS.TRASH:
+              await fetchNotes({ showTrash: true });
+              break;
+            default:
+              await fetchNotes();
+              break;
+          }
+        }
+      } catch (error) {
+        // If update failed and we did an optimistic update, refetch to restore correct state
+        console.error('Failed to update note:', error);
+        if (shouldRemoveFromList || favoriteChanged || archivedChanged) {
+          switch (currentView) {
+            case DASHBOARD_VIEWS.FAVORITES:
+              await fetchNotes({ showFavorites: true });
+              break;
+            case DASHBOARD_VIEWS.ARCHIVED:
+              await fetchNotes({ showArchived: true });
+              break;
+            case DASHBOARD_VIEWS.TRASH:
+              await fetchNotes({ showTrash: true });
+              break;
+            default:
+              await fetchNotes();
+              break;
+          }
         }
       }
     },
-    [selectedNote, updateNoteById, currentView, fetchNotes]
+    [selectedNote, updateNoteById, currentView, fetchNotes, handleCloseEditor, deleteNoteFromStore]
   );
 
   const handleDeleteNote = useCallback(
@@ -179,7 +232,13 @@ export default function DashboardPage() {
         console.error('Failed to delete note:', error);
         alert('Failed to delete note. Please try again.');
       } finally {
-        await fetchNotes(currentView === DASHBOARD_VIEWS.TRASH ? { showTrash: true } : undefined);
+        if (currentView === DASHBOARD_VIEWS.TRASH) {
+          await fetchNotes({ showTrash: true });
+        } else if (currentView === DASHBOARD_VIEWS.ARCHIVED) {
+          await fetchNotes({ showArchived: true });
+        } else {
+          await fetchNotes();
+        }
       }
     },
     [deleteNoteById, fetchNotes, handleCloseEditor, currentView]
@@ -189,7 +248,9 @@ export default function DashboardPage() {
     (query: string) => {
       if (currentView === DASHBOARD_VIEWS.TRASH) return;
       searchNotes(query, {
-        tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined
+        tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined,
+        showArchived: currentView === DASHBOARD_VIEWS.ARCHIVED,
+        showFavorites: currentView === DASHBOARD_VIEWS.FAVORITES,
       });
     },
     [searchNotes, selectedTagIds, currentView]
@@ -211,6 +272,12 @@ export default function DashboardPage() {
     setCurrentView(DASHBOARD_VIEWS.FAVORITES);
     clearTagSelection();
     fetchNotes({ showFavorites: true });
+  }, [clearTagSelection, fetchNotes]);
+
+  const handleShowArchived = useCallback(() => {
+    setCurrentView(DASHBOARD_VIEWS.ARCHIVED);
+    clearTagSelection();
+    fetchNotes({ showArchived: true });
   }, [clearTagSelection, fetchNotes]);
 
   // Mobile detection
@@ -333,7 +400,7 @@ export default function DashboardPage() {
         )}
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-3 py-4 space-y-1 flex flex-col overflow-hidden">
           <button
             onClick={handleShowAllNotes}
             className={`
@@ -373,6 +440,20 @@ export default function DashboardPage() {
           </button>
 
           <button
+            onClick={handleShowArchived}
+            className={`
+              w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors
+              ${currentView === DASHBOARD_VIEWS.ARCHIVED
+                ? 'bg-[var(--primary)] text-white'
+                : 'text-[var(--foreground)] hover:bg-[var(--background)]'
+              }
+            `}
+          >
+            <span className="material-symbols-outlined">archive</span>
+            <span className="font-medium">Archived</span>
+          </button>
+
+          <button
             onClick={handleShowTrash}
             className={`
               w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors
@@ -388,19 +469,23 @@ export default function DashboardPage() {
 
           {/* Tags Section */}
           {tags && tags.length > 0 && (
-            <div className="pt-4 mt-4 border-t border-[var(--border)]">
-              <div className="px-3 mb-2">
+            <div className="pt-4 mt-4 border-t border-[var(--border)] flex flex-col min-h-0 flex-1">
+              <div className="px-3 mb-2 flex-shrink-0">
                 <h3 className="text-xs font-semibold text-[var(--foreground-secondary)] uppercase tracking-wider">Tags</h3>
               </div>
-              <div className="space-y-1 max-h-48 overflow-y-auto">
-                {tags.slice(0, 10).map((tag) => (
+              <div className="space-y-1 overflow-y-auto flex-1 min-h-0">
+                {tags.map((tag) => (
                   <button
                     key={tag.id}
                     onClick={() => {
                       if (selectedTagIds.includes(tag.id)) {
                         clearTagSelection();
                       } else {
-                        searchNotes('', { tagIds: [tag.id] });
+                        searchNotes('', {
+                          tagIds: [tag.id],
+                          showArchived: currentView === DASHBOARD_VIEWS.ARCHIVED,
+                          showFavorites: currentView === DASHBOARD_VIEWS.FAVORITES,
+                        });
                       }
                     }}
                     className={`
@@ -458,6 +543,7 @@ export default function DashboardPage() {
               <h1 className="text-xl font-semibold text-[var(--foreground)]">
                 {currentView === DASHBOARD_VIEWS.ALL_NOTES && 'All Notes'}
                 {currentView === DASHBOARD_VIEWS.FAVORITES && 'Favorites'}
+                {currentView === DASHBOARD_VIEWS.ARCHIVED && 'Archived'}
                 {currentView === DASHBOARD_VIEWS.TRASH && 'Trash'}
               </h1>
               <span className="text-sm text-[var(--foreground-secondary)]">

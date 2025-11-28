@@ -23,11 +23,12 @@ export function useNotes() {
   const searchAbortControllerRef = useRef<AbortController | null>(null);
 
   // Define mutually exclusive filter options using discriminated union
-  // TypeScript will prevent both showTrash and showFavorites from being true simultaneously
+  // TypeScript will prevent multiple exclusive filters from being true simultaneously
   type FetchNotesOptions =
-    | { showTrash: true; showFavorites?: never }
-    | { showTrash?: never; showFavorites: true }
-    | { showTrash?: never; showFavorites?: never }
+    | { showTrash: true; showFavorites?: never; showArchived?: never }
+    | { showTrash?: never; showFavorites: true; showArchived?: never }
+    | { showTrash?: never; showFavorites?: never; showArchived: true }
+    | { showTrash?: never; showFavorites?: never; showArchived?: never }
     | undefined;
 
   // Fetch all notes
@@ -38,12 +39,14 @@ export function useNotes() {
     try {
       const params = new URLSearchParams();
 
-      // Note: trash and favorites filters are mutually exclusive (enforced by TypeScript types)
-      // Priority: Trash > Favorites > All Notes
+      // Note: trash, favorites, and archived filters are mutually exclusive (enforced by TypeScript types)
+      // Priority: Trash > Archived > Favorites > All Notes
       if (options?.showTrash) {
         params.append('trash', 'true');
+      } else if (options?.showArchived) {
+        params.append('archived', 'true');
       } else if (options?.showFavorites) {
-        // Only apply favorites filter if not showing trash
+        // Only apply favorites filter if not showing trash or archived
         params.append('favorites', 'true');
       }
 
@@ -71,6 +74,7 @@ export function useNotes() {
       title: string | null;
       content: string;
       is_favorite?: boolean;
+      is_archived?: boolean;
       tagIds?: string[];
     }) => {
       try {
@@ -106,6 +110,7 @@ export function useNotes() {
         title?: string | null;
         content?: string;
         is_favorite?: boolean;
+        is_archived?: boolean;
         tagIds?: string[];
       }
     ) => {
@@ -161,16 +166,25 @@ export function useNotes() {
 
   // Search notes with optional filters
   const searchNotes = useCallback(
-    async (query: string, filters?: { tagIds?: string[] }) => {
+    async (query: string, filters?: { tagIds?: string[]; showArchived?: boolean; showFavorites?: boolean; showTrash?: boolean }) => {
       // Cancel any in-flight search request
       if (searchAbortControllerRef.current) {
         searchAbortControllerRef.current.abort();
       }
 
-      // If no query and no tag filters, just fetch all notes
+      // If no query and no tag filters, restore the current view
       if (!query.trim() && (!filters?.tagIds || filters.tagIds.length === 0)) {
         searchAbortControllerRef.current = null;
-        fetchNotes();
+        // Restore current view with appropriate filters
+        if (filters?.showArchived) {
+          fetchNotes({ showArchived: true });
+        } else if (filters?.showFavorites) {
+          fetchNotes({ showFavorites: true });
+        } else if (filters?.showTrash) {
+          fetchNotes({ showTrash: true });
+        } else {
+          fetchNotes();
+        }
         return;
       }
 
@@ -193,6 +207,15 @@ export function useNotes() {
         // Add tag filters if provided
         if (filters?.tagIds && filters.tagIds.length > 0) {
           filters.tagIds.forEach(id => params.append('tagId', id));
+        }
+
+        // Add view filters
+        if (filters?.showArchived) {
+          params.append('archived', 'true');
+        } else if (filters?.showFavorites) {
+          params.append('favorites', 'true');
+        } else if (filters?.showTrash) {
+          params.append('trash', 'true');
         }
 
         const response = await fetch(`/api/notes/search?${params.toString()}`, {

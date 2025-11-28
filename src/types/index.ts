@@ -14,7 +14,14 @@ export interface Note {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  /** Whether the note is marked as favorite for quick access */
   is_favorite: boolean;
+  /**
+   * Whether the note is archived. Archived notes are hidden from default views
+   * but remain searchable by tags and accessible in the dedicated "Archived" view.
+   * Archived notes can still be favorited.
+   */
+  is_archived: boolean;
   sync_version: number;
   tags?: Tag[];
 }

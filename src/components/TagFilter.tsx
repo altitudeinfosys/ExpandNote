@@ -4,9 +4,6 @@ import { useState, useMemo } from 'react';
 import { Tag } from '@/types';
 import { useTags } from '@/hooks/useTags';
 
-// Constants
-const MAX_TAGS_DISPLAY = 10; // Number of tags to show before "Show more" button
-
 interface TagFilterProps {
   className?: string;
 }
@@ -21,7 +18,6 @@ export function TagFilter({ className = '' }: TagFilterProps) {
     deleteTag,
   } = useTags();
 
-  const [showMore, setShowMore] = useState(false);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const handleDeleteTag = async (tagId: string, tagName: string) => {
@@ -43,15 +39,9 @@ export function TagFilter({ className = '' }: TagFilterProps) {
     });
   }, [tags, sortOrder]);
 
-  const displayedTags = showMore
-    ? sortedTags
-    : sortedTags.slice(0, Math.min(MAX_TAGS_DISPLAY, sortedTags.length));
-
-  const showMoreButton = sortedTags.length > MAX_TAGS_DISPLAY;
-
   return (
-    <div className={className}>
-      <div className="flex items-center justify-between mb-3">
+    <div className={`${className} flex flex-col min-h-0`}>
+      <div className="flex items-center justify-between mb-3 flex-shrink-0">
         <div className="flex items-center gap-2">
           <h3 className="text-xs font-bold uppercase tracking-wider text-white">
             TAGS
@@ -81,19 +71,19 @@ export function TagFilter({ className = '' }: TagFilterProps) {
         )}
       </div>
 
-      {/* Tags list - Simplenote style */}
+      {/* Tags list - scrollable */}
       {isLoading ? (
         <div className="py-4 text-center">
           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500 mx-auto"></div>
         </div>
       ) : (
-        <div className="space-y-0.5">
+        <div className="space-y-0.5 overflow-y-auto flex-1 min-h-0 pr-1 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
           {sortedTags.length === 0 && (
             <div className="py-2 text-sm text-gray-400">
               No tags yet
             </div>
           )}
-          {displayedTags.map((tag) => (
+          {sortedTags.map((tag) => (
             <TagFilterItem
               key={tag.id}
               tag={tag}
@@ -102,14 +92,6 @@ export function TagFilter({ className = '' }: TagFilterProps) {
               onDelete={() => handleDeleteTag(tag.id, tag.name)}
             />
           ))}
-          {showMoreButton && !showMore && (
-            <button
-              onClick={() => setShowMore(true)}
-              className="w-full py-2 text-sm text-left text-gray-400 hover:text-gray-200"
-            >
-              Show {sortedTags.length - MAX_TAGS_DISPLAY} more...
-            </button>
-          )}
         </div>
       )}
     </div>

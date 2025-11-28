@@ -88,7 +88,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const body = await request.json();
-    const { title, content, is_favorite, tagIds } = body;
+    const { title, content, is_favorite, is_archived, tagIds } = body;
 
     // Validate content if provided
     if (content !== undefined) {
@@ -127,6 +127,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (title !== undefined) updates.title = title || null;
     if (content !== undefined) updates.content = content;
     if (is_favorite !== undefined) updates.is_favorite = is_favorite;
+    if (is_archived !== undefined) updates.is_archived = is_archived;
 
     // Update the note
     const { error: updateError } = await supabase
