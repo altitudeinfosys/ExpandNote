@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createServiceClient } from '@/lib/supabase/server';
 import { parseEmailContent, extractTagsFromSubject } from '@/lib/email/parser';
+import { processAttachments } from '@/lib/email/attachment-processor';
 import { MAX_CONTENT_SIZE_BYTES } from '@/lib/constants';
 import { config } from '@/lib/config';
 
@@ -296,10 +297,95 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Process attachments if any
+    let attachmentNotesCreated = 0;
+    const attachmentErrors: string[] = [];
+
+    if (email.attachments && email.attachments.length > 0) {
+      console.log(`Processing ${email.attachments.length} attachment(s)`);
+
+      const processedAttachments = await processAttachments(
+        email.attachments.map((att: any) => ({
+          filename: att.filename,
+          content_type: att.content_type,
+          content: att.content,
+        }))
+      );
+
+      for (const attachment of processedAttachments) {
+        if (attachment.success && attachment.content) {
+          try {
+            // Validate attachment content size
+            if (attachment.content.length > MAX_CONTENT_SIZE_BYTES) {
+              attachmentErrors.push(
+                `${attachment.filename}: Content too large (${attachment.content.length} bytes)`
+              );
+              continue;
+            }
+
+            // Create a new note for each attachment
+            const { data: attachmentNote, error: attachmentError } = await supabase
+              .from('notes')
+              .insert({
+                user_id: userSettings.user_id,
+                title: `${attachment.filename}`,
+                content: attachment.content,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+              .select()
+              .single();
+
+            if (attachmentError) {
+              console.error(`Failed to create note for ${attachment.filename}:`, attachmentError);
+              attachmentErrors.push(`${attachment.filename}: Failed to create note`);
+              continue;
+            }
+
+            // Apply the same tags to the attachment note
+            if (tags.length > 0) {
+              for (const tagName of tags) {
+                try {
+                  const { data: tag } = await supabase
+                    .from('tags')
+                    .select('id')
+                    .eq('user_id', userSettings.user_id)
+                    .eq('name', tagName)
+                    .single();
+
+                  if (tag) {
+                    await supabase
+                      .from('note_tags')
+                      .insert({
+                        note_id: attachmentNote.id,
+                        tag_id: tag.id,
+                      });
+                  }
+                } catch (error) {
+                  // Ignore tag errors for attachments
+                  console.error(`Failed to tag attachment note:`, error);
+                }
+              }
+            }
+
+            attachmentNotesCreated++;
+          } catch (error) {
+            console.error(`Error creating note for ${attachment.filename}:`, error);
+            attachmentErrors.push(`${attachment.filename}: Unexpected error`);
+          }
+        } else if (attachment.error) {
+          console.log(`Skipping attachment ${attachment.filename}: ${attachment.error}`);
+          attachmentErrors.push(`${attachment.filename}: ${attachment.error}`);
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       note_id: note.id,
       tags_created: tagsCreated,
+      attachments_processed: attachmentNotesCreated,
+      attachment_errors: attachmentErrors.length > 0 ? attachmentErrors : undefined,
       message: 'Note created successfully',
     });
 
