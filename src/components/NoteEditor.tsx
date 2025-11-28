@@ -305,9 +305,28 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
     setIsFavorite((prev) => !prev);
   }, []);
 
-  const toggleArchive = useCallback(() => {
-    setIsArchived((prev) => !prev);
-  }, []);
+  const toggleArchive = useCallback(async () => {
+    if (!note) return;
+
+    const newArchivedState = !isArchived;
+    setIsArchived(newArchivedState);
+
+    // Save immediately when archiving/unarchiving
+    try {
+      await onSave({
+        title: title.trim() || null,
+        content: content.trim(),
+        is_favorite: isFavorite,
+        is_archived: newArchivedState,
+      });
+      setLastSaved(new Date());
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      console.error('Failed to archive/unarchive note:', error);
+      // Revert the state if save failed
+      setIsArchived(!newArchivedState);
+    }
+  }, [note, isArchived, title, content, isFavorite, onSave]);
 
   const handleTagsChange = useCallback(async (tags: Tag[]) => {
     if (!note || !updateNoteTags) return;
