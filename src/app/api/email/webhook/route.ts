@@ -28,15 +28,39 @@ import { config } from '@/lib/config';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Initialize Resend client once (used for both verification and fetching)
+    const resendApiKey = process.env.RESEND_API_KEY;
+    if (!resendApiKey) {
+      console.error('RESEND_API_KEY is not set');
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
+    const resend = new Resend(resendApiKey);
+
     // Verify webhook signature for security
     const signature = request.headers.get('svix-signature');
     const svixId = request.headers.get('svix-id');
     const svixTimestamp = request.headers.get('svix-timestamp');
 
+    // Check if we're in production mode
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    // In production, webhook secret is REQUIRED
+    if (isProduction && !config.resend.webhookSecret) {
+      console.error('RESEND_WEBHOOK_SECRET is required in production');
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
     let parsedEvent;
 
     if (config.resend.webhookSecret) {
-      // Only verify if webhook secret is configured
+      // Verify signature when webhook secret is configured
       if (!signature || !svixId || !svixTimestamp) {
         console.error('Missing webhook signature headers');
         return NextResponse.json(
@@ -45,16 +69,6 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const resendApiKey = process.env.RESEND_API_KEY;
-      if (!resendApiKey) {
-        console.error('RESEND_API_KEY is not set');
-        return NextResponse.json(
-          { error: 'Server configuration error' },
-          { status: 500 }
-        );
-      }
-
-      const resend = new Resend(resendApiKey);
       const payload = await request.text();
 
       try {
@@ -78,8 +92,8 @@ export async function POST(request: NextRequest) {
       // Parse the event after verification
       parsedEvent = JSON.parse(payload);
     } else {
-      // No webhook secret configured - skip verification (development mode)
-      console.warn('RESEND_WEBHOOK_SECRET not configured - skipping signature verification');
+      // No webhook secret - only allowed in development
+      console.warn('RESEND_WEBHOOK_SECRET not configured - skipping signature verification (DEVELOPMENT ONLY)');
       parsedEvent = await request.json();
     }
     const event = parsedEvent;
@@ -165,19 +179,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Initialize Resend client
-    const resendApiKey = process.env.RESEND_API_KEY;
-    if (!resendApiKey) {
-      console.error('RESEND_API_KEY is not set');
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
-
-    const resend = new Resend(resendApiKey);
-
-    // Fetch the actual email content from Resend API
+    // Fetch the actual email content from Resend API (resend client already initialized)
     const { data: email, error: fetchError } = await resend.emails.receiving.get(email_id);
 
     if (fetchError || !email) {
@@ -235,52 +237,50 @@ export async function POST(request: NextRequest) {
       });
 
     // Process tags extracted from subject
+    // Use upsert to handle race conditions when multiple emails arrive simultaneously
     let tagsCreated = 0;
     if (tags.length > 0) {
       for (const tagName of tags) {
-        // Check if tag exists for this user
-        const { data: existingTag } = await supabase
-          .from('tags')
-          .select('id')
-          .eq('user_id', userSettings.user_id)
-          .eq('name', tagName)
-          .maybeSingle();
-
-        let tagId: string;
-
-        if (existingTag) {
-          tagId = existingTag.id;
-        } else {
-          // Create new tag
-          const { data: newTag, error: tagError } = await supabase
+        try {
+          // Use upsert with onConflict to handle race conditions atomically
+          const { data: tag, error: tagError } = await supabase
             .from('tags')
-            .insert({
-              user_id: userSettings.user_id,
-              name: tagName,
-            })
+            .upsert(
+              {
+                user_id: userSettings.user_id,
+                name: tagName,
+              },
+              {
+                onConflict: 'user_id,name',
+                ignoreDuplicates: false,
+              }
+            )
             .select('id')
             .single();
 
           if (tagError) {
-            console.error(`Failed to create tag ${tagName}:`, tagError);
+            console.error(`Failed to create/fetch tag ${tagName}:`, tagError);
             continue; // Skip this tag but continue with others
           }
 
-          tagId = newTag.id;
-        }
+          // Create note_tags association
+          const { error: associationError } = await supabase
+            .from('note_tags')
+            .insert({
+              note_id: note.id,
+              tag_id: tag.id,
+            });
 
-        // Create note_tags association
-        const { error: associationError } = await supabase
-          .from('note_tags')
-          .insert({
-            note_id: note.id,
-            tag_id: tagId,
-          });
-
-        if (associationError) {
-          console.error(`Failed to associate tag ${tagName}:`, associationError);
-        } else {
-          tagsCreated++;
+          if (associationError) {
+            // If association already exists (unique violation), ignore the error
+            if (associationError.code !== '23505') {
+              console.error(`Failed to associate tag ${tagName}:`, associationError);
+            }
+          } else {
+            tagsCreated++;
+          }
+        } catch (error) {
+          console.error(`Error processing tag ${tagName}:`, error);
         }
       }
     }
