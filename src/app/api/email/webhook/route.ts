@@ -304,13 +304,45 @@ export async function POST(request: NextRequest) {
     if (email.attachments && email.attachments.length > 0) {
       console.log(`Processing ${email.attachments.length} attachment(s)`);
 
-      const processedAttachments = await processAttachments(
-        email.attachments.map((att: any) => ({
-          filename: att.filename,
-          content_type: att.content_type,
-          content: att.content,
-        }))
-      );
+      // Fetch attachment content for each supported attachment
+      // Resend API returns metadata with download_url, we need to fetch content separately
+      const attachmentsWithContent: Array<{ filename: string; content_type: string; content: string | Buffer }> = [];
+
+      for (const att of email.attachments) {
+        try {
+          // Fetch the attachment details which includes the download_url
+          const { data: attachmentData, error: attachmentFetchError } = await resend.attachments.receiving.get({
+            id: att.id,
+            emailId: email_id,
+          });
+
+          if (attachmentFetchError || !attachmentData) {
+            console.error(`Failed to fetch attachment ${att.filename}:`, attachmentFetchError);
+            attachmentErrors.push(`${att.filename}: Failed to fetch attachment details`);
+            continue;
+          }
+
+          // Download the actual file content from the download URL
+          if (attachmentData.download_url) {
+            const response = await fetch(attachmentData.download_url);
+            if (!response.ok) {
+              attachmentErrors.push(`${att.filename}: Failed to download (${response.status})`);
+              continue;
+            }
+            const buffer = Buffer.from(await response.arrayBuffer());
+            attachmentsWithContent.push({
+              filename: att.filename,
+              content_type: att.content_type,
+              content: buffer,
+            });
+          }
+        } catch (error) {
+          console.error(`Error fetching attachment ${att.filename}:`, error);
+          attachmentErrors.push(`${att.filename}: Error fetching attachment`);
+        }
+      }
+
+      const processedAttachments = await processAttachments(attachmentsWithContent);
 
       for (const attachment of processedAttachments) {
         if (attachment.success && attachment.content) {
