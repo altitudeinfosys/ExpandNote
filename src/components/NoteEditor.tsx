@@ -38,6 +38,8 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
   const [aiProfiles, setAiProfiles] = useState<AIProfile[]>([]);
   const [executingProfileId, setExecutingProfileId] = useState<string | null>(null);
   const [executedProfileIds, setExecutedProfileIds] = useState<Set<string>>(new Set());
+  const [isExecutingAll, setIsExecutingAll] = useState(false);
+  const [executionProgress, setExecutionProgress] = useState<{ current: number; total: number } | null>(null);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
 
@@ -480,6 +482,79 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
     }
   }, [note, aiProfiles, executingProfileId]);
 
+  // Execute all AI profiles sequentially
+  const handleExecuteAllProfiles = useCallback(async () => {
+    if (!note || aiProfiles.length === 0 || isExecutingAll || executingProfileId) return;
+
+    setIsExecutingAll(true);
+    setExecutionProgress({ current: 0, total: aiProfiles.length });
+
+    let successCount = 0;
+    let failedCount = 0;
+
+    // Create version BEFORE starting batch execution
+    try {
+      await fetch(`/api/notes/${note.id}/versions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trigger: 'before_ai', aiProfileId: 'batch' }),
+      });
+    } catch (error) {
+      console.error('Failed to create pre-batch version:', error);
+    }
+
+    for (let i = 0; i < aiProfiles.length; i++) {
+      const profile = aiProfiles[i];
+      setExecutionProgress({ current: i + 1, total: aiProfiles.length });
+
+      try {
+        const response = await fetch(`/api/ai-profiles/${profile.id}/execute`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ noteId: note.id }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to execute AI profile');
+        }
+
+        successCount++;
+      } catch (error) {
+        failedCount++;
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        toast.error(`${profile.name} failed: ${errorMessage}`);
+        console.error(`Failed to execute profile ${profile.name}:`, error);
+      }
+    }
+
+    // Create version AFTER batch execution
+    try {
+      await fetch(`/api/notes/${note.id}/versions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trigger: 'after_ai', aiProfileId: 'batch' }),
+      });
+    } catch (error) {
+      console.error('Failed to create post-batch version:', error);
+    }
+
+    setIsExecutingAll(false);
+    setExecutionProgress(null);
+
+    // Show summary toast
+    if (failedCount === 0) {
+      toast.success(`Executed ${successCount} AI profile${successCount > 1 ? 's' : ''} successfully`);
+    } else {
+      toast.error(`Completed ${successCount}/${aiProfiles.length} profiles (${failedCount} failed)`);
+    }
+
+    // Reload to show updated content
+    if (successCount > 0) {
+      window.location.reload();
+    }
+  }, [note, aiProfiles, isExecutingAll, executingProfileId]);
+
   // Copy note content to clipboard
   const handleCopy = useCallback(async () => {
     // Check if Clipboard API is available
@@ -794,14 +869,14 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
                 <button
                   key={profile.id}
                   onClick={() => handleExecuteProfile(profile.id)}
-                  disabled={executingProfileId !== null}
+                  disabled={executingProfileId !== null || isExecutingAll}
                   className={`
                     flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
                     transition-colors
                     ${
                       executingProfileId === profile.id
                         ? 'bg-[var(--primary)] text-white cursor-wait'
-                        : executingProfileId
+                        : (executingProfileId || isExecutingAll)
                         ? 'bg-[var(--background)] text-[var(--foreground-secondary)] cursor-not-allowed'
                         : 'bg-[var(--primary)] hover:opacity-90 text-white cursor-pointer'
                     }
@@ -820,6 +895,41 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
                   )}
                 </button>
               ))}
+
+              {/* Run All button - only show when 2+ profiles */}
+              {aiProfiles.length >= 2 && (
+                <button
+                  onClick={handleExecuteAllProfiles}
+                  disabled={executingProfileId !== null || isExecutingAll}
+                  className={`
+                    flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
+                    transition-colors
+                    ${
+                      isExecutingAll
+                        ? 'bg-green-600 text-white cursor-wait'
+                        : (executingProfileId || isExecutingAll)
+                        ? 'bg-[var(--background)] text-[var(--foreground-secondary)] cursor-not-allowed'
+                        : 'bg-green-600 hover:bg-green-700 text-white cursor-pointer'
+                    }
+                  `}
+                >
+                  {isExecutingAll ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>
+                        {executionProgress
+                          ? `Running ${executionProgress.current}/${executionProgress.total}...`
+                          : 'Running...'}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-base">double_arrow</span>
+                      <span>Run All ({aiProfiles.length})</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         )}
