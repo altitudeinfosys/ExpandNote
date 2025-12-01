@@ -34,6 +34,10 @@ export const MODEL_TOKEN_LIMITS = {
   'mistralai/mixtral-8x7b-instruct': 32768,
   'deepseek/deepseek-chat': 64000,
   'deepseek/deepseek-r1': 64000,
+  // xAI Grok models
+  'x-ai/grok-2-1212': 131072,
+  'x-ai/grok-2-vision-1212': 32768,
+  'x-ai/grok-3-beta': 131072,
 } as const;
 
 export type AIModel = keyof typeof MODEL_TOKEN_LIMITS;
