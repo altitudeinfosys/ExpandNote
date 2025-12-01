@@ -405,6 +405,33 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
   //   }
   // }, [aiProfiles, note, executingProfileId, executedProfileIds]);
 
+  // Helper function to refresh note content without full page reload
+  const refreshNoteContent = useCallback(async () => {
+    if (!note) return;
+    try {
+      const response = await fetch(`/api/notes/${note.id}`);
+      if (response.ok) {
+        const result = await response.json();
+        const updatedNote = result.data;
+        if (updatedNote) {
+          setContent(updatedNote.content || '');
+          setTitle(updatedNote.title || '');
+          setLastSaved(new Date(updatedNote.updated_at));
+          setHasUnsavedChanges(false);
+          // Update tags if included
+          if (updatedNote.tags) {
+            setSelectedTags(updatedNote.tags);
+          }
+          // Clear version cache since content changed
+          lastVersionContentRef.current.delete(note.id);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to refresh note:', error);
+      toast.error('Please refresh the page to see updates');
+    }
+  }, [note]);
+
   // Execute an AI profile
   const handleExecuteProfile = useCallback(async (profileId: string) => {
     if (!note || executingProfileId) return;
@@ -465,13 +492,8 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
           duration: 4000,
         });
       } else if (result.outputBehavior === 'append' || result.outputBehavior === 'replace') {
-        // Refresh the note to show updated content
-        toast.success('Note updated!', {
-          duration: 3000,
-        });
-        // Force a refresh by triggering onClose and reopening
-        // The parent component should handle this
-        window.location.reload();
+        // Refresh the note content without full page reload
+        await refreshNoteContent();
       }
     } catch (error) {
       console.error('Failed to execute AI profile:', error);
@@ -480,11 +502,20 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
     } finally {
       setExecutingProfileId(null);
     }
-  }, [note, aiProfiles, executingProfileId]);
+  }, [note, aiProfiles, executingProfileId, refreshNoteContent]);
 
   // Execute all AI profiles sequentially
   const handleExecuteAllProfiles = useCallback(async () => {
     if (!note || aiProfiles.length === 0 || isExecutingAll || executingProfileId) return;
+
+    // Warn about multiple "replace" profiles
+    const replaceProfiles = aiProfiles.filter(p => p.output_behavior === 'replace');
+    if (replaceProfiles.length > 1) {
+      toast(`Note: ${replaceProfiles.length} profiles will replace content. Only the last one's output will remain.`, {
+        duration: 5000,
+        icon: '⚠️',
+      });
+    }
 
     setIsExecutingAll(true);
     setExecutionProgress({ current: 0, total: aiProfiles.length });
@@ -494,13 +525,17 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
 
     // Create version BEFORE starting batch execution
     try {
-      await fetch(`/api/notes/${note.id}/versions`, {
+      const versionResponse = await fetch(`/api/notes/${note.id}/versions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ trigger: 'before_ai', aiProfileId: 'batch' }),
       });
+      if (!versionResponse.ok) {
+        console.error('Failed to create pre-batch version:', versionResponse.status);
+      }
     } catch (error) {
       console.error('Failed to create pre-batch version:', error);
+      toast('Version history temporarily unavailable', { icon: '⚠️' });
     }
 
     for (let i = 0; i < aiProfiles.length; i++) {
@@ -530,11 +565,14 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
 
     // Create version AFTER batch execution
     try {
-      await fetch(`/api/notes/${note.id}/versions`, {
+      const versionResponse = await fetch(`/api/notes/${note.id}/versions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ trigger: 'after_ai', aiProfileId: 'batch' }),
       });
+      if (!versionResponse.ok) {
+        console.error('Failed to create post-batch version:', versionResponse.status);
+      }
     } catch (error) {
       console.error('Failed to create post-batch version:', error);
     }
@@ -549,11 +587,11 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
       toast.error(`Completed ${successCount}/${aiProfiles.length} profiles (${failedCount} failed)`);
     }
 
-    // Reload to show updated content
+    // Refresh note content without full page reload
     if (successCount > 0) {
-      window.location.reload();
+      await refreshNoteContent();
     }
-  }, [note, aiProfiles, isExecutingAll, executingProfileId]);
+  }, [note, aiProfiles, isExecutingAll, executingProfileId, refreshNoteContent]);
 
   // Copy note content to clipboard
   const handleCopy = useCallback(async () => {
@@ -901,6 +939,8 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
                 <button
                   onClick={handleExecuteAllProfiles}
                   disabled={executingProfileId !== null || isExecutingAll}
+                  aria-label={`Run all ${aiProfiles.length} AI profiles`}
+                  aria-busy={isExecutingAll}
                   className={`
                     flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
                     transition-colors
