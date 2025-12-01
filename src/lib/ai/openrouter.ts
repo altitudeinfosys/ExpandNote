@@ -57,6 +57,11 @@ export const OPENROUTER_MODELS = [
   // DeepSeek models
   { id: 'deepseek/deepseek-chat', name: 'DeepSeek Chat' },
   { id: 'deepseek/deepseek-r1', name: 'DeepSeek R1' },
+
+  // xAI Grok models (verified from openrouter.ai/models as of 2025-12-01)
+  { id: 'x-ai/grok-2-1212', name: 'Grok 2' },
+  { id: 'x-ai/grok-2-vision-1212', name: 'Grok 2 Vision' },
+  { id: 'x-ai/grok-3-beta', name: 'Grok 3 Beta' },
 ] as const;
 
 /**
@@ -222,6 +227,11 @@ export function getOpenRouterMaxTokens(model: string): number {
     // DeepSeek models
     'deepseek/deepseek-chat': 8192,
     'deepseek/deepseek-r1': 8192,
+
+    // xAI Grok models (max output tokens, verified 2025-12-01)
+    'x-ai/grok-2-1212': 8192,
+    'x-ai/grok-2-vision-1212': 8192,
+    'x-ai/grok-3-beta': 16384,
   };
 
   // Return specific limit if known, otherwise default to 4000

@@ -35,6 +35,9 @@ const OPENROUTER_MODELS = [
   { id: 'deepseek/deepseek-v3.2-exp', name: 'DeepSeek V3.2' },
   { id: 'qwen/qwen3-max', name: 'Qwen3 Max' },
   { id: 'qwen/qwen3-coder-plus', name: 'Qwen3 Coder Plus' },
+  { id: 'x-ai/grok-2-1212', name: 'Grok 2' },
+  { id: 'x-ai/grok-2-vision-1212', name: 'Grok 2 Vision' },
+  { id: 'x-ai/grok-3-beta', name: 'Grok 3 Beta' },
 ];
 
 export default function NewAIProfilePage() {
