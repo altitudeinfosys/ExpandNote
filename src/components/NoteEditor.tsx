@@ -528,7 +528,7 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
       const versionResponse = await fetch(`/api/notes/${note.id}/versions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trigger: 'before_ai', aiProfileId: 'batch' }),
+        body: JSON.stringify({ trigger: 'before_ai' }),
       });
       if (!versionResponse.ok) {
         console.error('Failed to create pre-batch version:', versionResponse.status);
@@ -568,7 +568,7 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
       const versionResponse = await fetch(`/api/notes/${note.id}/versions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trigger: 'after_ai', aiProfileId: 'batch' }),
+        body: JSON.stringify({ trigger: 'after_ai' }),
       });
       if (!versionResponse.ok) {
         console.error('Failed to create post-batch version:', versionResponse.status);
