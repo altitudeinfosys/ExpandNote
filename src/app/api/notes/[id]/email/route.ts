@@ -196,7 +196,7 @@ This note was shared by ${userData.email}
         subject: `Note: ${noteTitle}`,
         html: htmlContent,
         text: textContent,
-        reply_to: userData.email,
+        replyTo: userData.email,
       });
 
       if (sendError) {
