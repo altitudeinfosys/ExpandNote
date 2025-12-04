@@ -92,7 +92,7 @@ export async function POST(
       );
     }
 
-    // Check rate limit
+    // Check rate limit (count all emails including pending in the last hour)
     const oneHourAgo = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
     const { count: emailCount, error: countError } = await supabase
       .from('email_sends')
@@ -107,6 +107,27 @@ export async function POST(
       return NextResponse.json(
         { error: 'Rate limit exceeded. You can send up to 10 emails per hour. Please try again later.' },
         { status: 429 }
+      );
+    }
+
+    // Reserve a rate limit slot BEFORE sending (prevents race condition)
+    // Insert with 'pending' status to claim the slot
+    const { data: reservedSlot, error: reserveError } = await supabase
+      .from('email_sends')
+      .insert({
+        user_id: user.id,
+        note_id: noteId,
+        recipient_email: email,
+        status: 'pending',
+      })
+      .select('id')
+      .single();
+
+    if (reserveError) {
+      console.error('Error reserving rate limit slot:', reserveError);
+      return NextResponse.json(
+        { error: 'Failed to process request. Please try again.' },
+        { status: 500 }
       );
     }
 
@@ -247,24 +268,26 @@ This note was shared by ${userEmail}
 
       if (sendError) {
         console.error('Resend API error:', sendError);
+        // Update the reserved slot to 'failed' status
+        await supabase
+          .from('email_sends')
+          .update({ status: 'failed' })
+          .eq('id', reservedSlot.id);
         return NextResponse.json(
           { error: 'Failed to send email. Please try again later.' },
           { status: 500 }
         );
       }
 
-      // Log the email send for rate limiting
-      const { error: logError } = await supabase
+      // Update the reserved slot to 'sent' status
+      const { error: updateError } = await supabase
         .from('email_sends')
-        .insert({
-          user_id: user.id,
-          note_id: noteId,
-          recipient_email: email,
-        });
+        .update({ status: 'sent' })
+        .eq('id', reservedSlot.id);
 
-      if (logError) {
+      if (updateError) {
         // Log but don't fail - email was sent successfully
-        console.error('Error logging email send:', logError);
+        console.error('Error updating email send status:', updateError);
       }
 
       return NextResponse.json({
@@ -275,6 +298,11 @@ This note was shared by ${userEmail}
 
     } catch (sendError) {
       console.error('Error sending email:', sendError);
+      // Update the reserved slot to 'failed' status
+      await supabase
+        .from('email_sends')
+        .update({ status: 'failed' })
+        .eq('id', reservedSlot.id);
       return NextResponse.json(
         { error: 'Failed to send email. Please try again later.' },
         { status: 500 }
