@@ -42,6 +42,9 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
   const [executionProgress, setExecutionProgress] = useState<{ current: number; total: number } | null>(null);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailAddress, setEmailAddress] = useState('');
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   // Ref for textarea to manage cursor position
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -54,6 +57,32 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
 
   // Cache last version content to avoid repeated DB queries
   const lastVersionContentRef = useRef<Map<string, string | null>>(new Map());
+
+  // Fetch user email when email modal opens
+  useEffect(() => {
+    let isCancelled = false;
+
+    const fetchUserEmail = async () => {
+      if (showEmailModal && !emailAddress) {
+        try {
+          const supabase = createClient();
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user?.email && !isCancelled) {
+            setEmailAddress(user.email);
+          }
+        } catch (error) {
+          if (!isCancelled) {
+            console.error('Failed to fetch user email:', error);
+          }
+        }
+      }
+    };
+    fetchUserEmail();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [showEmailModal, emailAddress]);
 
   // Reset state when note ID changes (not just when note object reference changes)
   useEffect(() => {
@@ -668,6 +697,66 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
     }
   }, [content]);
 
+  // Close email modal with cleanup
+  const closeEmailModal = useCallback(() => {
+    setShowEmailModal(false);
+    setEmailAddress('');
+  }, []);
+
+  // Send note via email
+  const handleSendEmail = useCallback(async () => {
+    if (!note || !emailAddress.trim()) {
+      toast.error('Please enter an email address');
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailAddress)) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    setIsSendingEmail(true);
+
+    try {
+      const response = await fetch(`/api/notes/${note.id}/email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: emailAddress }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send email');
+      }
+
+      toast.success(`Note sent to ${emailAddress}`);
+      closeEmailModal();
+    } catch (error) {
+      console.error('Failed to send email:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to send email');
+    } finally {
+      setIsSendingEmail(false);
+    }
+  }, [note, emailAddress, closeEmailModal]);
+
+  // Handle ESC key for email modal
+  useEffect(() => {
+    const handleEscKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showEmailModal && !isSendingEmail) {
+        closeEmailModal();
+      }
+    };
+
+    if (showEmailModal) {
+      document.addEventListener('keydown', handleEscKey);
+      return () => document.removeEventListener('keydown', handleEscKey);
+    }
+  }, [showEmailModal, isSendingEmail, closeEmailModal]);
+
   // View a specific version
   const handleViewVersion = useCallback((versionId: string) => {
     setSelectedVersionId(versionId);
@@ -847,6 +936,18 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
             </button>
           )}
 
+          {/* Email Button */}
+          {note && (
+            <button
+              onClick={() => setShowEmailModal(true)}
+              className="p-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background)] rounded-lg transition-colors"
+              aria-label="Email note"
+              title="Email note"
+            >
+              <span className="material-symbols-outlined text-lg">mail</span>
+            </button>
+          )}
+
           {note && onDelete && (
             <button
               onClick={handleDelete}
@@ -995,6 +1096,87 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
           onClose={() => setSelectedVersionId(null)}
           onRestore={() => handleRestoreVersion(selectedVersionId)}
         />
+      )}
+
+      {/* Email Modal */}
+      {showEmailModal && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            // Close on backdrop click (not when clicking modal content)
+            if (e.target === e.currentTarget && !isSendingEmail) {
+              closeEmailModal();
+            }
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="email-modal-title"
+        >
+          <div className="bg-[var(--background-surface)] rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 id="email-modal-title" className="text-lg font-semibold text-[var(--foreground)]">Email Note</h3>
+              <button
+                onClick={closeEmailModal}
+                className="p-1 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] rounded transition-colors"
+                aria-label="Close modal"
+                disabled={isSendingEmail}
+              >
+                <span className="material-symbols-outlined text-xl">close</span>
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <label htmlFor="email-input" className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                Email Address
+              </label>
+              <input
+                id="email-input"
+                type="email"
+                value={emailAddress}
+                onChange={(e) => setEmailAddress(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !isSendingEmail) {
+                    handleSendEmail();
+                  }
+                }}
+                placeholder="Enter email address"
+                className="w-full px-3 py-2 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] bg-[var(--background)] text-[var(--foreground)]"
+                disabled={isSendingEmail}
+                autoFocus
+              />
+              <p className="mt-2 text-xs text-[var(--foreground-secondary)]">
+                The note will be sent to this email address.
+              </p>
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={closeEmailModal}
+                className="px-4 py-2 text-sm font-medium text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background)] rounded-lg transition-colors"
+                disabled={isSendingEmail}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendEmail}
+                disabled={isSendingEmail || !emailAddress.trim()}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[var(--primary)] hover:opacity-90 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSendingEmail ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Sending...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-base">send</span>
+                    <span>Send</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
