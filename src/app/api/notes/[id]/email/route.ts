@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createClient } from '@/lib/supabase/server';
 
+type RouteParams = {
+  params: Promise<{
+    id: string;
+  }>;
+};
+
 /**
  * POST /api/notes/[id]/email
  * Send a note via email using Resend
@@ -13,10 +19,10 @@ import { createClient } from '@/lib/supabase/server';
  */
 export async function POST(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  { params }: RouteParams
 ) {
   try {
-    const { id: noteId } = await context.params;
+    const { id: noteId } = await params;
 
     // Parse request body
     const body = await request.json();
