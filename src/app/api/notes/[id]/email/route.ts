@@ -143,17 +143,12 @@ export async function POST(
       );
     }
 
-    // Get user info for "from" address
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('email')
-      .eq('id', user.id)
-      .single();
-
-    if (userError || !userData) {
-      console.error('Error fetching user data:', userError);
+    // Get user email from auth (already available from getUser())
+    const userEmail = user.email;
+    if (!userEmail) {
+      console.error('User email not available from auth');
       return NextResponse.json(
-        { error: 'Failed to fetch user information' },
+        { error: 'User email not found' },
         { status: 500 }
       );
     }
@@ -221,7 +216,7 @@ export async function POST(
   <div class="content">${noteContent.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
   <div class="footer">
     <p>Sent from <a href="https://expandnote.com" class="branding">ExpandNote</a></p>
-    <p>This note was shared by ${userData.email}</p>
+    <p>This note was shared by ${userEmail}</p>
   </div>
 </body>
 </html>
@@ -236,7 +231,7 @@ ${noteContent}
 
 ---
 Sent from ExpandNote
-This note was shared by ${userData.email}
+This note was shared by ${userEmail}
     `.trim();
 
     // Send email via Resend
@@ -247,7 +242,7 @@ This note was shared by ${userData.email}
         subject: `Note: ${sanitizedTitle}`,
         html: htmlContent,
         text: textContent,
-        replyTo: userData.email,
+        replyTo: userEmail,
       });
 
       if (sendError) {

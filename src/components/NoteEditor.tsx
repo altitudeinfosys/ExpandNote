@@ -60,20 +60,28 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
 
   // Fetch user email when email modal opens
   useEffect(() => {
+    let isCancelled = false;
+
     const fetchUserEmail = async () => {
       if (showEmailModal && !emailAddress) {
         try {
           const supabase = createClient();
           const { data: { user } } = await supabase.auth.getUser();
-          if (user?.email) {
+          if (user?.email && !isCancelled) {
             setEmailAddress(user.email);
           }
         } catch (error) {
-          console.error('Failed to fetch user email:', error);
+          if (!isCancelled) {
+            console.error('Failed to fetch user email:', error);
+          }
         }
       }
     };
     fetchUserEmail();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [showEmailModal, emailAddress]);
 
   // Reset state when note ID changes (not just when note object reference changes)

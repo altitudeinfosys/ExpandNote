@@ -320,7 +320,7 @@ export async function POST(request: NextRequest) {
           }
 
           // Fetch the attachment details which includes the download_url
-          const { data: attachmentData, error: attachmentFetchError } = await resend.attachments.receiving.get({
+          const { data: attachmentData, error: attachmentFetchError } = await resend.emails.receiving.attachments.get({
             id: att.id,
             emailId: email_id,
           });
