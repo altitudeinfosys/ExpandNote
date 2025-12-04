@@ -8,6 +8,25 @@ type RouteParams = {
   }>;
 };
 
+// Rate limit constants
+const RATE_LIMIT_MAX_EMAILS = 10;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
+// Maximum content size for emails (500KB)
+const MAX_EMAIL_CONTENT_SIZE = 500 * 1024;
+
+/**
+ * Sanitize text for use in email subject line
+ * Removes newlines (header injection prevention) and escapes HTML
+ */
+function sanitizeSubject(text: string): string {
+  return text
+    .replace(/[\r\n]/g, ' ')  // Remove newlines to prevent header injection
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .slice(0, 100);  // Limit subject length
+}
+
 /**
  * POST /api/notes/[id]/email
  * Send a note via email using Resend
@@ -15,7 +34,11 @@ type RouteParams = {
  * Request body:
  * - email: string (required) - destination email address
  *
- * Security: User must be authenticated and own the note
+ * Security:
+ * - User must be authenticated and own the note
+ * - Rate limited to 10 emails per hour per user
+ * - Content size limited to 500KB
+ * - Input sanitization for XSS and header injection prevention
  */
 export async function POST(
   request: NextRequest,
@@ -36,9 +59,9 @@ export async function POST(
       );
     }
 
-    // Basic email validation
+    // Enhanced email validation with header injection prevention
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(email) || /[\r\n]/.test(email)) {
       return NextResponse.json(
         { error: 'Invalid email address format' },
         { status: 400 }
@@ -69,6 +92,24 @@ export async function POST(
       );
     }
 
+    // Check rate limit
+    const oneHourAgo = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
+    const { count: emailCount, error: countError } = await supabase
+      .from('email_sends')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('sent_at', oneHourAgo);
+
+    if (countError) {
+      console.error('Error checking rate limit:', countError);
+      // Continue anyway - don't block users due to rate limit check errors
+    } else if (emailCount !== null && emailCount >= RATE_LIMIT_MAX_EMAILS) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. You can send up to 10 emails per hour. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
     // Fetch the note and verify ownership
     const { data: note, error: noteError } = await supabase
       .from('notes')
@@ -93,6 +134,15 @@ export async function POST(
       );
     }
 
+    // Check content size limit
+    const contentSize = new Blob([note.content || '']).size;
+    if (contentSize > MAX_EMAIL_CONTENT_SIZE) {
+      return NextResponse.json(
+        { error: 'Note is too large to email. Maximum size is 500KB.' },
+        { status: 400 }
+      );
+    }
+
     // Get user info for "from" address
     const { data: userData, error: userError } = await supabase
       .from('users')
@@ -108,9 +158,10 @@ export async function POST(
       );
     }
 
-    // Prepare email content
+    // Prepare email content with sanitization
     const noteTitle = note.title || 'Untitled Note';
     const noteContent = note.content || '';
+    const sanitizedTitle = sanitizeSubject(noteTitle);
 
     // Create HTML email content
     const htmlContent = `
@@ -193,7 +244,7 @@ This note was shared by ${userData.email}
       const { data: emailData, error: sendError } = await resend.emails.send({
         from: `ExpandNote <noreply@${process.env.RESEND_EMAIL_DOMAIN || 'send.expandnote.com'}>`,
         to: email,
-        subject: `Note: ${noteTitle}`,
+        subject: `Note: ${sanitizedTitle}`,
         html: htmlContent,
         text: textContent,
         replyTo: userData.email,
@@ -202,9 +253,23 @@ This note was shared by ${userData.email}
       if (sendError) {
         console.error('Resend API error:', sendError);
         return NextResponse.json(
-          { error: 'Failed to send email', details: sendError.message },
+          { error: 'Failed to send email. Please try again later.' },
           { status: 500 }
         );
+      }
+
+      // Log the email send for rate limiting
+      const { error: logError } = await supabase
+        .from('email_sends')
+        .insert({
+          user_id: user.id,
+          note_id: noteId,
+          recipient_email: email,
+        });
+
+      if (logError) {
+        // Log but don't fail - email was sent successfully
+        console.error('Error logging email send:', logError);
       }
 
       return NextResponse.json({
@@ -216,7 +281,7 @@ This note was shared by ${userData.email}
     } catch (sendError) {
       console.error('Error sending email:', sendError);
       return NextResponse.json(
-        { error: 'Failed to send email' },
+        { error: 'Failed to send email. Please try again later.' },
         { status: 500 }
       );
     }

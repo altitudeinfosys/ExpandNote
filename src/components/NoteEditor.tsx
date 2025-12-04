@@ -689,6 +689,12 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
     }
   }, [content]);
 
+  // Close email modal with cleanup
+  const closeEmailModal = useCallback(() => {
+    setShowEmailModal(false);
+    setEmailAddress('');
+  }, []);
+
   // Send note via email
   const handleSendEmail = useCallback(async () => {
     if (!note || !emailAddress.trim()) {
@@ -720,15 +726,28 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
       }
 
       toast.success(`Note sent to ${emailAddress}`);
-      setShowEmailModal(false);
-      setEmailAddress('');
+      closeEmailModal();
     } catch (error) {
       console.error('Failed to send email:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to send email');
     } finally {
       setIsSendingEmail(false);
     }
-  }, [note, emailAddress]);
+  }, [note, emailAddress, closeEmailModal]);
+
+  // Handle ESC key for email modal
+  useEffect(() => {
+    const handleEscKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showEmailModal && !isSendingEmail) {
+        closeEmailModal();
+      }
+    };
+
+    if (showEmailModal) {
+      document.addEventListener('keydown', handleEscKey);
+      return () => document.removeEventListener('keydown', handleEscKey);
+    }
+  }, [showEmailModal, isSendingEmail, closeEmailModal]);
 
   // View a specific version
   const handleViewVersion = useCallback((versionId: string) => {
@@ -1073,17 +1092,26 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
 
       {/* Email Modal */}
       {showEmailModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            // Close on backdrop click (not when clicking modal content)
+            if (e.target === e.currentTarget && !isSendingEmail) {
+              closeEmailModal();
+            }
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="email-modal-title"
+        >
           <div className="bg-[var(--background-surface)] rounded-lg shadow-xl max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-[var(--foreground)]">Email Note</h3>
+              <h3 id="email-modal-title" className="text-lg font-semibold text-[var(--foreground)]">Email Note</h3>
               <button
-                onClick={() => {
-                  setShowEmailModal(false);
-                  setEmailAddress('');
-                }}
+                onClick={closeEmailModal}
                 className="p-1 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] rounded transition-colors"
                 aria-label="Close modal"
+                disabled={isSendingEmail}
               >
                 <span className="material-symbols-outlined text-xl">close</span>
               </button>
@@ -1115,10 +1143,7 @@ export function NoteEditor({ note, onSave, onDelete, onClose, getTagsForNote, up
 
             <div className="flex gap-3 justify-end">
               <button
-                onClick={() => {
-                  setShowEmailModal(false);
-                  setEmailAddress('');
-                }}
+                onClick={closeEmailModal}
                 className="px-4 py-2 text-sm font-medium text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background)] rounded-lg transition-colors"
                 disabled={isSendingEmail}
               >
