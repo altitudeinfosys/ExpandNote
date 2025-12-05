@@ -3,6 +3,14 @@
 import Link from 'next/link';
 import { useTheme } from '@/contexts/ThemeContext';
 
+// Convert hex color to rgba with opacity
+function hexToRgba(hex: string, opacity: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+}
+
 export default function Home() {
   const { theme, setTheme } = useTheme();
 
@@ -103,7 +111,7 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link
               href="/signup"
-              className="w-full sm:w-auto px-8 py-4 text-white rounded-xl transition-all font-semibold text-lg hover:opacity-90 hover:scale-105"
+              className="w-full sm:w-auto px-8 py-4 text-white rounded-xl transition-all font-semibold text-lg hover:opacity-90 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
               style={{
                 background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
                 boxShadow: '0 10px 40px -10px rgba(139, 92, 246, 0.5)'
@@ -113,7 +121,7 @@ export default function Home() {
             </Link>
             <Link
               href="/login"
-              className="w-full sm:w-auto px-8 py-4 bg-background-surface text-foreground rounded-xl hover:bg-background transition-all font-semibold text-lg border border-border hover:scale-105"
+              className="w-full sm:w-auto px-8 py-4 bg-background-surface text-foreground rounded-xl hover:bg-background transition-all font-semibold text-lg border border-border hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
             >
               Sign In
             </Link>
@@ -595,16 +603,16 @@ function FeatureCard({
 }) {
   return (
     <div
-      className="group p-8 rounded-3xl border transition-all duration-300 hover:shadow-lg"
+      className="group p-8 rounded-3xl border transition-all duration-300 hover:shadow-lg focus-within:ring-2 focus-within:ring-offset-2"
       style={{
-        backgroundColor: theme === 'dark' ? `${color}10` : `${color}08`,
-        borderColor: theme === 'dark' ? `${color}30` : `${color}20`
+        backgroundColor: hexToRgba(color, theme === 'dark' ? 0.1 : 0.05),
+        borderColor: hexToRgba(color, theme === 'dark' ? 0.2 : 0.15)
       }}
     >
       <div
         className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5"
         style={{
-          backgroundColor: theme === 'dark' ? `${color}25` : `${color}15`
+          backgroundColor: hexToRgba(color, theme === 'dark' ? 0.2 : 0.12)
         }}
       >
         <svg className="w-6 h-6" style={{ color }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
