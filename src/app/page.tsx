@@ -65,6 +65,14 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Skip Link for Accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-background-surface focus:text-foreground focus:rounded-lg focus:border focus:border-border focus:shadow-lg"
+      >
+        Skip to main content
+      </a>
+
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -83,6 +91,7 @@ export default function Home() {
             <div className="flex items-center gap-3">
               {/* Theme Toggle */}
               <button
+                type="button"
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                 className="p-2 rounded-lg bg-background-surface border border-border hover:border-foreground-secondary/30 transition-colors"
                 aria-label="Toggle theme"
@@ -117,6 +126,7 @@ export default function Home() {
       </nav>
 
       {/* Hero Section */}
+      <main id="main-content">
       <section className="pt-32 pb-24 px-4">
         <div className="max-w-4xl mx-auto text-center">
           {/* Badge */}
@@ -608,6 +618,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      </main>
 
       {/* Footer */}
       <footer className="py-12 px-4 bg-background-surface border-t border-border">
