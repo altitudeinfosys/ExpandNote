@@ -137,7 +137,7 @@ export default function Home() {
               color: '#a78bfa'
             }}
           >
-            <span className="relative flex h-2 w-2">
+            <span className="relative flex h-2 w-2" aria-hidden="true">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: '#a78bfa' }}></span>
               <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: '#8b5cf6' }}></span>
             </span>
