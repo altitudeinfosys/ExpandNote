@@ -639,8 +639,8 @@ export default function Home() {
             <div className="flex items-center gap-6 text-sm text-foreground-secondary">
               <Link href="/login" className="hover:text-foreground transition-colors">Sign In</Link>
               <Link href="/signup" className="hover:text-foreground transition-colors">Sign Up</Link>
-              <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
-              <a href="#" className="hover:text-foreground transition-colors">Terms</a>
+              <span className="cursor-default">Privacy</span>
+              <span className="cursor-default">Terms</span>
             </div>
 
             <p className="text-sm text-foreground-secondary">
