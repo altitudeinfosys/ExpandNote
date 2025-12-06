@@ -14,7 +14,26 @@ const spaceGrotesk = Space_Grotesk({
 
 export const metadata: Metadata = {
   title: "ExpandNote - AI-Powered Note Taking",
-  description: "AI-powered note-taking app with voice input, smart tagging, and automated content processing. Replace Simplenote with enhanced AI capabilities.",
+  description: "Create smarter notes with AI automation, intelligent tagging, and seamless sync. Access 40+ AI models including GPT-4, Claude, and Gemini. The note-taking app that thinks with you.",
+  keywords: ["note taking", "AI notes", "smart notes", "GPT-4", "Claude", "markdown", "offline notes", "voice notes"],
+  authors: [{ name: "ExpandNote" }],
+  creator: "ExpandNote",
+  openGraph: {
+    title: "ExpandNote - AI-Powered Note Taking",
+    description: "Create smarter notes with AI automation, intelligent tagging, and seamless sync. Access 40+ AI models. The note-taking app that thinks with you.",
+    type: "website",
+    locale: "en_US",
+    siteName: "ExpandNote",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ExpandNote - AI-Powered Note Taking",
+    description: "Create smarter notes with AI automation, intelligent tagging, and seamless sync. Access 40+ AI models.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
   icons: {
     icon: [
       { url: '/logo-icon.svg', type: 'image/svg+xml', media: '(prefers-color-scheme: light)' },
