@@ -24,14 +24,8 @@ function getInitialTheme(): Theme {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(getInitialTheme);
-  const [mounted, setMounted] = useState(false);
 
-  // Mark as mounted after first render
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Apply theme to document immediately and on changes
+  // Apply theme to document on mount and on changes
   useEffect(() => {
     const root = document.documentElement;
 
@@ -49,11 +43,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setThemeState(newTheme);
   };
 
-  // Prevent flash of wrong theme by not rendering until mounted
-  if (!mounted) {
-    return null;
-  }
-
+  // Always render the provider to avoid "useTheme must be used within ThemeProvider" errors
+  // Theme class will be applied to document on first useEffect run
   return (
     <ThemeContext.Provider value={{ theme, setTheme }}>
       {children}
