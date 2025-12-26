@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { Toaster } from "@/components/ui/sonner";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
@@ -65,6 +66,7 @@ export default function RootLayout({
           <ThemeProvider>
             <AuthProvider>
               {children}
+              <Toaster position="bottom-right" richColors />
             </AuthProvider>
           </ThemeProvider>
         </ErrorBoundary>
