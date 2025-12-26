@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -62,6 +63,15 @@ function FeatureCard({
 
 export default function Home() {
   const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  // Prevent hydration mismatch by only rendering theme-dependent content after mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Use a consistent theme for SSR, then switch to actual theme after mount
+  const currentTheme = mounted ? theme : 'light';
 
   return (
     <div className="min-h-screen bg-background">
@@ -92,18 +102,22 @@ export default function Home() {
               {/* Theme Toggle */}
               <button
                 type="button"
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                onClick={() => setTheme(currentTheme === 'dark' ? 'light' : 'dark')}
                 className="p-2 rounded-lg bg-background-surface border border-border hover:border-foreground-secondary/30 transition-colors"
                 aria-label="Toggle theme"
               >
-                {theme === 'dark' ? (
-                  <svg className="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
+                {mounted ? (
+                  currentTheme === 'dark' ? (
+                    <svg className="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5 text-foreground-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                  )
                 ) : (
-                  <svg className="w-5 h-5 text-foreground-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                  </svg>
+                  <div className="w-5 h-5" />
                 )}
               </button>
 
@@ -133,7 +147,7 @@ export default function Home() {
           <div
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-8"
             style={{
-              backgroundColor: theme === 'dark' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(139, 92, 246, 0.1)',
+              backgroundColor: currentTheme === 'dark' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(139, 92, 246, 0.1)',
               color: '#a78bfa'
             }}
           >
@@ -201,7 +215,7 @@ export default function Home() {
             <div
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-6"
               style={{
-                backgroundColor: theme === 'dark' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)',
+                backgroundColor: currentTheme === 'dark' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)',
                 color: '#34d399'
               }}
             >
@@ -225,8 +239,8 @@ export default function Home() {
             <div
               className="rounded-3xl p-8 border transition-all duration-300 hover:shadow-lg"
               style={{
-                backgroundColor: theme === 'dark' ? 'rgba(59, 130, 246, 0.08)' : 'rgba(59, 130, 246, 0.05)',
-                borderColor: theme === 'dark' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)'
+                backgroundColor: currentTheme === 'dark' ? 'rgba(59, 130, 246, 0.08)' : 'rgba(59, 130, 246, 0.05)',
+                borderColor: currentTheme === 'dark' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)'
               }}
             >
               <div className="flex items-center gap-3 mb-6">
@@ -259,8 +273,8 @@ export default function Home() {
             <div
               className="rounded-3xl p-8 border transition-all duration-300 hover:shadow-lg"
               style={{
-                backgroundColor: theme === 'dark' ? 'rgba(139, 92, 246, 0.08)' : 'rgba(139, 92, 246, 0.05)',
-                borderColor: theme === 'dark' ? 'rgba(139, 92, 246, 0.2)' : 'rgba(139, 92, 246, 0.15)'
+                backgroundColor: currentTheme === 'dark' ? 'rgba(139, 92, 246, 0.08)' : 'rgba(139, 92, 246, 0.05)',
+                borderColor: currentTheme === 'dark' ? 'rgba(139, 92, 246, 0.2)' : 'rgba(139, 92, 246, 0.15)'
               }}
             >
               <div className="flex items-center gap-3 mb-6">
@@ -302,8 +316,8 @@ export default function Home() {
             <div
               className="rounded-3xl p-8 border transition-all duration-300 hover:shadow-lg"
               style={{
-                backgroundColor: theme === 'dark' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(16, 185, 129, 0.05)',
-                borderColor: theme === 'dark' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.15)'
+                backgroundColor: currentTheme === 'dark' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(16, 185, 129, 0.05)',
+                borderColor: currentTheme === 'dark' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.15)'
               }}
             >
               <div className="flex items-center gap-3 mb-6">
@@ -323,7 +337,7 @@ export default function Home() {
                 <div className="flex items-center gap-2 mb-3">
                   <div
                     className="w-6 h-6 rounded-lg flex items-center justify-center"
-                    style={{ backgroundColor: theme === 'dark' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)' }}
+                    style={{ backgroundColor: currentTheme === 'dark' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)' }}
                   >
                     <svg className="w-4 h-4" style={{ color: '#34d399' }} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
@@ -365,7 +379,7 @@ export default function Home() {
               title="AI Profiles"
               description="Create custom AI automations triggered by tags. Add #summarize and watch AI transform your notes instantly."
               color="#8b5cf6"
-              theme={theme}
+              theme={currentTheme}
               icon={
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
               }
@@ -376,7 +390,7 @@ export default function Home() {
               title="40+ AI Models"
               description="Access GPT-4, Claude, Gemini, Llama, Mistral, Grok and more. Choose the perfect model for each task."
               color="#f59e0b"
-              theme={theme}
+              theme={currentTheme}
               icon={
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
               }
@@ -387,7 +401,7 @@ export default function Home() {
               title="Email-to-Note"
               description="Send emails to your unique address and they become notes. Supports PDF and Word attachments."
               color="#ec4899"
-              theme={theme}
+              theme={currentTheme}
               icon={
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
               }
@@ -398,7 +412,7 @@ export default function Home() {
               title="Offline-First"
               description="Works without internet. Your notes sync automatically when you're back online across all devices."
               color="#0ea5e9"
-              theme={theme}
+              theme={currentTheme}
               icon={
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z" />
               }
@@ -409,7 +423,7 @@ export default function Home() {
               title="Smart Tagging"
               description="Organize notes with powerful tags. Filter, search, and trigger AI automations with a simple #hashtag."
               color="#14b8a6"
-              theme={theme}
+              theme={currentTheme}
               icon={
                 <>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
@@ -423,7 +437,7 @@ export default function Home() {
               title="Version History"
               description="Never lose your work. Automatic versioning lets you restore any previous version of your notes."
               color="#6366f1"
-              theme={theme}
+              theme={currentTheme}
               icon={
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
               }
@@ -475,29 +489,29 @@ export default function Home() {
           <div
             className="relative rounded-3xl p-8 sm:p-12 overflow-hidden border"
             style={{
-              background: theme === 'dark'
+              background: currentTheme === 'dark'
                 ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'
                 : 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-              borderColor: theme === 'dark' ? 'rgba(51, 65, 85, 0.5)' : 'rgba(203, 213, 225, 0.8)',
-              boxShadow: theme === 'dark'
+              borderColor: currentTheme === 'dark' ? 'rgba(51, 65, 85, 0.5)' : 'rgba(203, 213, 225, 0.8)',
+              boxShadow: currentTheme === 'dark'
                 ? '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
                 : '0 25px 50px -12px rgba(0, 0, 0, 0.1)'
             }}
           >
             {/* Background decoration */}
-            <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl" style={{ backgroundColor: theme === 'dark' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)' }} />
-            <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full blur-3xl" style={{ backgroundColor: theme === 'dark' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(139, 92, 246, 0.1)' }} />
+            <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl" style={{ backgroundColor: currentTheme === 'dark' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)' }} />
+            <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full blur-3xl" style={{ backgroundColor: currentTheme === 'dark' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(139, 92, 246, 0.1)' }} />
 
             <div className="relative flex flex-col md:flex-row items-center gap-8">
               <div className="flex-1 text-center md:text-left">
                 <div
                   className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium mb-4 border"
                   style={{
-                    background: theme === 'dark'
+                    background: currentTheme === 'dark'
                       ? 'linear-gradient(135deg, rgba(249, 115, 22, 0.2) 0%, rgba(236, 72, 153, 0.2) 100%)'
                       : 'linear-gradient(135deg, rgba(249, 115, 22, 0.15) 0%, rgba(236, 72, 153, 0.15) 100%)',
-                    borderColor: theme === 'dark' ? 'rgba(249, 115, 22, 0.3)' : 'rgba(249, 115, 22, 0.4)',
-                    color: theme === 'dark' ? '#fdba74' : '#c2410c'
+                    borderColor: currentTheme === 'dark' ? 'rgba(249, 115, 22, 0.3)' : 'rgba(249, 115, 22, 0.4)',
+                    color: currentTheme === 'dark' ? '#fdba74' : '#c2410c'
                   }}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -507,13 +521,13 @@ export default function Home() {
                 </div>
                 <h2
                   className="text-3xl sm:text-4xl font-bold mb-4"
-                  style={{ color: theme === 'dark' ? '#ffffff' : '#0f172a' }}
+                  style={{ color: currentTheme === 'dark' ? '#ffffff' : '#0f172a' }}
                 >
                   iOS & Android Apps
                 </h2>
                 <p
                   className="text-lg mb-6"
-                  style={{ color: theme === 'dark' ? '#cbd5e1' : '#475569' }}
+                  style={{ color: currentTheme === 'dark' ? '#cbd5e1' : '#475569' }}
                 >
                   Take your AI-powered notes anywhere. Native mobile apps with offline support, voice input, and seamless sync.
                 </p>
@@ -525,9 +539,9 @@ export default function Home() {
                     tabIndex={-1}
                     className="flex items-center gap-2 px-5 py-3 rounded-xl border opacity-80 cursor-not-allowed select-none"
                     style={{
-                      backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(15, 23, 42, 0.05)',
-                      borderColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(15, 23, 42, 0.1)',
-                      color: theme === 'dark' ? '#ffffff' : '#0f172a'
+                      backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(15, 23, 42, 0.05)',
+                      borderColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(15, 23, 42, 0.1)',
+                      color: currentTheme === 'dark' ? '#ffffff' : '#0f172a'
                     }}
                   >
                     <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -542,9 +556,9 @@ export default function Home() {
                     tabIndex={-1}
                     className="flex items-center gap-2 px-5 py-3 rounded-xl border opacity-80 cursor-not-allowed select-none"
                     style={{
-                      backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(15, 23, 42, 0.05)',
-                      borderColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(15, 23, 42, 0.1)',
-                      color: theme === 'dark' ? '#ffffff' : '#0f172a'
+                      backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(15, 23, 42, 0.05)',
+                      borderColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(15, 23, 42, 0.1)',
+                      color: currentTheme === 'dark' ? '#ffffff' : '#0f172a'
                     }}
                   >
                     <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -560,11 +574,11 @@ export default function Home() {
                 <div
                   className="relative w-48 h-96 rounded-[2.5rem] border-4 shadow-2xl"
                   style={{
-                    backgroundColor: theme === 'dark' ? '#020617' : '#1e293b',
-                    borderColor: theme === 'dark' ? '#334155' : '#475569'
+                    backgroundColor: currentTheme === 'dark' ? '#020617' : '#1e293b',
+                    borderColor: currentTheme === 'dark' ? '#334155' : '#475569'
                   }}
                 >
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-6 rounded-b-xl" style={{ backgroundColor: theme === 'dark' ? '#1e293b' : '#334155' }} />
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-6 rounded-b-xl" style={{ backgroundColor: currentTheme === 'dark' ? '#1e293b' : '#334155' }} />
                   <div
                     className="absolute inset-4 top-8 rounded-2xl flex items-center justify-center"
                     style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3) 0%, rgba(139, 92, 246, 0.3) 100%)' }}

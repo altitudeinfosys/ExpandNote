@@ -420,82 +420,70 @@ export default function DashboardPage() {
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1 flex flex-col overflow-hidden">
-          <button
+          <Button
+            variant={currentView === DASHBOARD_VIEWS.ALL_NOTES ? 'default' : 'ghost'}
+            className="w-full justify-start gap-3"
             onClick={handleShowAllNotes}
-            className={`
-              w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors
-              ${currentView === DASHBOARD_VIEWS.ALL_NOTES
-                ? 'bg-[var(--primary)] text-white'
-                : 'text-[var(--foreground)] hover:bg-[var(--background)]'
-              }
-            `}
           >
             <span className="material-symbols-outlined">description</span>
             <span className="font-medium">All Notes</span>
-          </button>
+          </Button>
 
-          <button
+          <Button
+            variant={currentView === DASHBOARD_VIEWS.FAVORITES ? 'default' : 'ghost'}
+            className="w-full justify-start gap-3"
             onClick={handleShowFavorites}
             aria-label="View favorite notes"
             aria-current={currentView === DASHBOARD_VIEWS.FAVORITES ? 'page' : undefined}
-            className={`
-              w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors
-              ${currentView === DASHBOARD_VIEWS.FAVORITES
-                ? 'bg-[var(--primary)] text-white'
-                : 'text-[var(--foreground)] hover:bg-[var(--background)]'
-              }
-            `}
           >
             <span className="material-symbols-outlined" aria-hidden="true">star</span>
             <span className="font-medium">Favorites</span>
-          </button>
+          </Button>
 
-          <button
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-3"
             onClick={() => router.push('/settings?section=ai-profiles')}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[var(--foreground)] hover:bg-[var(--background)] transition-colors"
           >
             <span className="material-symbols-outlined">auto_awesome</span>
             <span className="font-medium">AI Profiles</span>
-          </button>
+          </Button>
 
-          <button
+          <Button
+            variant={currentView === DASHBOARD_VIEWS.ARCHIVED ? 'default' : 'ghost'}
+            className="w-full justify-start gap-3"
             onClick={handleShowArchived}
-            className={`
-              w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors
-              ${currentView === DASHBOARD_VIEWS.ARCHIVED
-                ? 'bg-[var(--primary)] text-white'
-                : 'text-[var(--foreground)] hover:bg-[var(--background)]'
-              }
-            `}
           >
             <span className="material-symbols-outlined">archive</span>
             <span className="font-medium">Archived</span>
-          </button>
+          </Button>
 
-          <button
+          <Button
+            variant={currentView === DASHBOARD_VIEWS.TRASH ? 'default' : 'ghost'}
+            className="w-full justify-start gap-3"
             onClick={handleShowTrash}
-            className={`
-              w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors
-              ${currentView === DASHBOARD_VIEWS.TRASH
-                ? 'bg-[var(--primary)] text-white'
-                : 'text-[var(--foreground)] hover:bg-[var(--background)]'
-              }
-            `}
           >
             <span className="material-symbols-outlined">delete</span>
             <span className="font-medium">Trash</span>
-          </button>
+          </Button>
 
           {/* Tags Section */}
           {tags && tags.length > 0 && (
-            <div className="pt-4 mt-4 border-t border-[var(--border)] flex flex-col min-h-0 flex-1">
+            <div className="pt-4 mt-4 border-t border-border flex flex-col min-h-0 flex-1">
               <div className="px-3 mb-2 flex-shrink-0">
-                <h3 className="text-xs font-semibold text-[var(--foreground-secondary)] uppercase tracking-wider">Tags</h3>
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tags</h3>
               </div>
               <div className="space-y-1 overflow-y-auto flex-1 min-h-0">
                 {tags.map((tag) => (
-                  <button
+                  <Button
                     key={tag.id}
+                    variant="ghost"
+                    size="sm"
+                    className={`w-full justify-start gap-2 ${
+                      selectedTagIds.includes(tag.id)
+                        ? 'bg-ai-purple/10 text-ai-purple hover:bg-ai-purple/20'
+                        : 'text-muted-foreground'
+                    }`}
                     onClick={() => {
                       if (selectedTagIds.includes(tag.id)) {
                         clearTagSelection();
@@ -507,47 +495,43 @@ export default function DashboardPage() {
                         });
                       }
                     }}
-                    className={`
-                      w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm
-                      ${selectedTagIds.includes(tag.id)
-                        ? 'bg-[var(--ai-purple)]/10 text-[var(--ai-purple)]'
-                        : 'text-[var(--foreground-secondary)] hover:bg-[var(--background)]'
-                      }
-                    `}
                   >
                     <span className="material-symbols-outlined text-base">tag</span>
                     <span className="truncate">#{tag.name}</span>
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
           )}
 
-          <div className="pt-4 border-t border-[var(--border)] mt-4">
-            <button
+          <div className="pt-4 border-t border-border mt-4">
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3"
               onClick={() => router.push('/settings')}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[var(--foreground)] hover:bg-[var(--background)] transition-colors"
             >
               <span className="material-symbols-outlined">settings</span>
               <span className="font-medium">Settings</span>
-            </button>
+            </Button>
           </div>
         </nav>
 
         {/* User section */}
-        <div className="px-4 py-4 border-t border-[var(--border)]">
+        <div className="px-4 py-4 border-t border-border">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-[var(--primary)] rounded-full flex items-center justify-center">
+            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
               <span className="material-symbols-outlined text-white text-sm">person</span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-[var(--foreground)] truncate">{user.email}</p>
-              <button
+              <p className="text-sm font-medium text-foreground truncate">{user.email}</p>
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
                 onClick={handleSignOut}
-                className="text-xs text-[var(--foreground-secondary)] hover:text-[var(--foreground)] transition-colors"
               >
                 Sign Out
-              </button>
+              </Button>
             </div>
           </div>
         </div>
