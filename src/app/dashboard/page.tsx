@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useNotes } from '@/hooks/useNotes';
@@ -9,6 +10,21 @@ import { useTags } from '@/hooks/useTags';
 import { useNotesStore } from '@/stores/notesStore';
 import { NoteEditor } from '@/components/NoteEditor';
 import { SearchBar } from '@/components/SearchBar';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Spinner } from '@/components/ui/spinner';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 
 // Constants
 const MOBILE_BREAKPOINT = 768;
@@ -107,7 +123,7 @@ export default function DashboardPage() {
       setShowEditor(true);
     } catch (error) {
       console.error('Failed to create note:', error);
-      alert('Failed to create note. Please try again.');
+      toast.error('Failed to create note. Please try again.');
     } finally {
       setIsCreatingNote(false);
     }
@@ -230,7 +246,7 @@ export default function DashboardPage() {
         handleCloseEditor();
       } catch (error) {
         console.error('Failed to delete note:', error);
-        alert('Failed to delete note. Please try again.');
+        toast.error('Failed to delete note. Please try again.');
       } finally {
         if (currentView === DASHBOARD_VIEWS.TRASH) {
           await fetchNotes({ showTrash: true });
@@ -297,10 +313,10 @@ export default function DashboardPage() {
 
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[var(--background)]">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-[var(--foreground-secondary)]">Loading...</p>
+          <Spinner size="lg" className="mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -335,43 +351,46 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="flex h-screen bg-[var(--background)] overflow-hidden">
+    <TooltipProvider>
+    <div className="flex h-screen bg-background overflow-hidden">
       {/* Mobile Header - Hide when editor is showing */}
       {isMobile && !showEditor && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-[var(--background-surface)] border-b border-[var(--border)] px-4 py-3 flex items-center justify-between">
-          <button
+        <div className="fixed top-0 left-0 right-0 z-50 bg-background-surface border-b border-border px-4 py-3 flex items-center justify-between">
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 hover:bg-[var(--background)] rounded-lg transition-colors"
           >
-            <span className="material-symbols-outlined text-[var(--foreground)]">menu</span>
-          </button>
-          <h1 className="text-lg font-semibold text-[var(--foreground)]">ExpandNote</h1>
+            <span className="material-symbols-outlined">menu</span>
+          </Button>
+          <h1 className="text-lg font-semibold text-foreground">ExpandNote</h1>
           <div className="flex items-center gap-2">
-            <button
+            <Button
+              variant="ghost"
+              size="icon-sm"
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="p-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background)] rounded-lg transition-colors"
             >
               <span className="material-symbols-outlined">
                 {theme === 'dark' ? 'light_mode' : 'dark_mode'}
               </span>
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="p-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background)] rounded-lg transition-colors disabled:opacity-50"
-              title="Refresh notes"
             >
               <span className={`material-symbols-outlined ${isRefreshing ? 'animate-spin' : ''}`}>
                 refresh
               </span>
-            </button>
-            <button
+            </Button>
+            <Button
+              size="icon-sm"
               onClick={handleCreateNote}
               disabled={isCreatingNote}
-              className="p-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
             >
               <span className="material-symbols-outlined">add</span>
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -551,33 +570,44 @@ export default function DashboardPage() {
               </span>
             </div>
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="p-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background)] rounded-lg transition-colors"
-                title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-              >
-                <span className="material-symbols-outlined text-xl">
-                  {theme === 'dark' ? 'light_mode' : 'dark_mode'}
-                </span>
-              </button>
-              <button
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                className="p-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--background)] rounded-lg transition-colors disabled:opacity-50"
-                title="Refresh notes"
-              >
-                <span className={`material-symbols-outlined text-xl ${isRefreshing ? 'animate-spin' : ''}`}>
-                  refresh
-                </span>
-              </button>
-              <button
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                  >
+                    <span className="material-symbols-outlined text-xl">
+                      {theme === 'dark' ? 'light_mode' : 'dark_mode'}
+                    </span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                  >
+                    <span className={`material-symbols-outlined text-xl ${isRefreshing ? 'animate-spin' : ''}`}>
+                      refresh
+                    </span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Refresh notes</TooltipContent>
+              </Tooltip>
+              <Button
                 onClick={handleCreateNote}
                 disabled={isCreatingNote}
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 transition-colors font-medium"
               >
                 <span className="material-symbols-outlined text-xl">add</span>
                 <span>New Note</span>
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -604,7 +634,7 @@ export default function DashboardPage() {
             <div className="flex-1 overflow-y-auto">
               {isLoading ? (
                 <div className="flex items-center justify-center h-64">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  <Spinner size="default" />
                 </div>
               ) : notes.length === 0 ? (
                 <div className="text-center py-12 px-4">
@@ -619,12 +649,9 @@ export default function DashboardPage() {
                   <p className="text-[var(--foreground-secondary)] mb-4 text-sm">
                     Create your first note to get started
                   </p>
-                  <button
-                    onClick={handleCreateNote}
-                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
-                  >
+                  <Button onClick={handleCreateNote}>
                     Create Note
-                  </button>
+                  </Button>
                 </div>
               ) : (
                 <div className="divide-y divide-[var(--border)]">
@@ -663,17 +690,18 @@ export default function DashboardPage() {
                         {note.tags && note.tags.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-2">
                             {note.tags.slice(0, 3).map((tag: { id: string; name: string }) => (
-                              <span
+                              <Badge
                                 key={tag.id}
-                                className="px-2 py-0.5 text-xs rounded-full bg-[var(--ai-purple)]/10 text-[var(--ai-purple)]"
+                                variant="secondary"
+                                className="text-xs bg-ai-purple/10 text-ai-purple hover:bg-ai-purple/20"
                               >
                                 #{tag.name}
-                              </span>
+                              </Badge>
                             ))}
                             {note.tags.length > 3 && (
-                              <span className="px-2 py-0.5 text-xs text-[var(--foreground-secondary)]">
+                              <Badge variant="outline" className="text-xs">
                                 +{note.tags.length - 3}
-                              </span>
+                              </Badge>
                             )}
                           </div>
                         )}
@@ -731,5 +759,6 @@ export default function DashboardPage() {
         />
       )}
     </div>
+    </TooltipProvider>
   );
 }
