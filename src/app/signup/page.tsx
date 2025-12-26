@@ -5,6 +5,10 @@ import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { isValidEmail, validatePassword, SPECIAL_CHARS } from '@/lib/validation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function SignUpPage() {
   const [email, setEmail] = useState('');
@@ -80,9 +84,9 @@ export default function SignUpPage() {
 
   if (success) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="w-full max-w-md px-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 text-center">
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 px-4">
+        <Card className="w-full max-w-md text-center">
+          <CardContent className="pt-8">
             <div className="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -97,47 +101,40 @@ export default function SignUpPage() {
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
               Click the link in the email to verify your account and complete the sign-up process.
             </p>
-            <Link
-              href="/login"
-              className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-            >
-              Go to Login
-            </Link>
-          </div>
-        </div>
+            <Button asChild size="lg">
+              <Link href="/login">Go to Login</Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="w-full max-w-md px-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8">
-          <div className="text-center mb-8">
-            <div className="flex justify-center mb-4">
-              <Image
-                src="/logo-icon.svg"
-                alt="ExpandNote"
-                width={64}
-                height={64}
-                className="w-16 h-16 dark:hidden"
-              />
-              <Image
-                src="/logo-icon-dark.svg"
-                alt="ExpandNote"
-                width={64}
-                height={64}
-                className="w-16 h-16 hidden dark:block"
-              />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Create Account
-            </h1>
-            <p className="text-gray-600 dark:text-gray-300">
-              Sign up for ExpandNote
-            </p>
+    <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 px-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center space-y-4">
+          <div className="flex justify-center">
+            <Image
+              src="/logo-icon.svg"
+              alt="ExpandNote"
+              width={64}
+              height={64}
+              className="w-16 h-16 dark:hidden"
+            />
+            <Image
+              src="/logo-icon-dark.svg"
+              alt="ExpandNote"
+              width={64}
+              height={64}
+              className="w-16 h-16 hidden dark:block"
+            />
           </div>
+          <CardTitle className="text-3xl">Create Account</CardTitle>
+          <CardDescription>Sign up for ExpandNote</CardDescription>
+        </CardHeader>
 
+        <CardContent>
           {error && (
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
               <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
@@ -145,36 +142,31 @@ export default function SignUpPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Email Address
-              </label>
-              <input
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address</Label>
+              <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors"
                 placeholder="you@example.com"
                 disabled={loading}
                 required
               />
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Password
-              </label>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
               <div className="relative">
-                <input
+                <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 pr-12 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors"
                   placeholder="At least 8 characters"
                   disabled={loading}
                   required
+                  className="pr-12"
                 />
                 <button
                   type="button"
@@ -194,25 +186,23 @@ export default function SignUpPage() {
                   )}
                 </button>
               </div>
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
                 Must include uppercase, lowercase, number, and special character ({SPECIAL_CHARS})
               </p>
             </div>
 
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Confirm Password
-              </label>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
               <div className="relative">
-                <input
+                <Input
                   id="confirmPassword"
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-4 py-3 pr-12 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors"
                   placeholder="Confirm your password"
                   disabled={loading}
                   required
+                  className="pr-12"
                 />
                 <button
                   type="button"
@@ -234,19 +224,20 @@ export default function SignUpPage() {
               </div>
             </div>
 
-            <button
+            <Button
               type="submit"
               disabled={loading}
-              className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full"
+              size="lg"
             >
               {loading ? 'Creating Account...' : 'Sign Up'}
-            </button>
+            </Button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Already have an account?{' '}
-              <Link href="/login" className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
+              <Link href="/login" className="text-primary hover:underline font-medium">
                 Log In
               </Link>
             </p>
@@ -257,8 +248,8 @@ export default function SignUpPage() {
               Back to Home
             </Link>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
