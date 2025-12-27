@@ -1,4 +1,4 @@
-import { CreateVersionParams, NoteVersion, VersionListItem } from '@/types/version';
+import { CreateVersionParams, NoteVersion, VersionListItem } from '@/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { SIGNIFICANT_CHANGE_THRESHOLD, AUTO_SAVE_VERSION_FREQUENCY } from './constants';
 

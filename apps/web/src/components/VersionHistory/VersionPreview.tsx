@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { NoteVersion } from '@/types/version';
+import { NoteVersion } from '@/types';
 import { formatDateTime } from '@/lib/utils/date';
 
 interface VersionPreviewProps {

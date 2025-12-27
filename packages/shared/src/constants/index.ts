@@ -1,21 +1,29 @@
-// Shared constants between web and mobile
+/**
+ * Application-wide constants - shared between web and mobile
+ */
 
-// Note limits
+// Note constraints
+export const MAX_CONTENT_SIZE_BYTES = 1024 * 1024; // 1MB
+export const MAX_TITLE_LENGTH = 500; // characters
 export const MAX_TAGS_PER_NOTE = 5;
-export const MAX_CONTENT_SIZE = 1024 * 1024; // 1MB
-export const MAX_TITLE_LENGTH = 500;
 
-// Timing
-export const AUTO_SAVE_DELAY_MS = 2000;
-export const SEARCH_DEBOUNCE_MS = 300;
+// Attachment constraints
+export const MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+
+// Auto-save configuration
+export const AUTO_SAVE_DELAY_MS = 2000; // 2 seconds
 
 // Pagination
 export const DEFAULT_PAGE_SIZE = 50;
 export const MAX_PAGE_SIZE = 100;
+
+// Search
 export const MIN_SEARCH_QUERY_LENGTH = 2;
+export const SEARCH_DEBOUNCE_MS = 300;
 
 // Rate limits
 export const MAX_AI_EXECUTIONS_PER_MINUTE = 10;
 
-// Attachment limits
-export const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024; // 10MB
+// Sync
+export const SYNC_RETRY_DELAY_MS = 5000; // 5 seconds
+export const MAX_SYNC_RETRIES = 3;

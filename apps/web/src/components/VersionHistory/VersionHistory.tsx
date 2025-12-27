@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { VersionListItem } from '@/types/version';
+import { VersionListItem } from '@/types';
 import { formatDateTime } from '@/lib/utils/date';
 
 interface VersionHistoryProps {
