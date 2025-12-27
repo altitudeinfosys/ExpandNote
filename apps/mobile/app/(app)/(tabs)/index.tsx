@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
-  Animated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -15,6 +14,7 @@ import { Swipeable, GestureHandlerRootView } from 'react-native-gesture-handler'
 import { useColorScheme } from '@/components/useColorScheme';
 import { supabase } from '@/lib/supabase';
 import { useHaptics } from '@/hooks/useHaptics';
+import { NoteCard } from '@/components/notes/NoteCard';
 import type { Note } from '@expandnote/shared/types';
 
 type FilterTab = 'all' | 'favorites' | 'archived' | 'trash';
@@ -175,28 +175,27 @@ export default function NotesScreen() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  // Memoized callbacks for NoteCard - prevent re-creating on each render
+  const handleNotePress = useCallback((noteId: string) => {
+    router.push(`/(app)/note/${noteId}`);
+  }, [router]);
 
-    if (diffDays === 0) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } else if (diffDays === 1) {
-      return 'Yesterday';
-    } else if (diffDays < 7) {
-      return `${diffDays} days ago`;
-    } else {
-      return date.toLocaleDateString();
-    }
-  };
+  // Note card height is approximately 120px (padding + content)
+  const ITEM_HEIGHT = 120;
 
-  const renderLeftActions = (note: Note) => {
+  const getItemLayout = useCallback((_: unknown, index: number) => ({
+    length: ITEM_HEIGHT,
+    offset: ITEM_HEIGHT * index,
+    index,
+  }), []);
+
+  const renderLeftActions = useCallback((note: Note) => {
     return (
       <TouchableOpacity
         style={[styles.swipeAction, styles.favoriteAction]}
         onPress={() => toggleFavorite(note)}
+        accessibilityRole="button"
+        accessibilityLabel={note.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
       >
         <FontAwesome
           name={note.is_favorite ? 'star' : 'star-o'}
@@ -208,15 +207,17 @@ export default function NotesScreen() {
         </Text>
       </TouchableOpacity>
     );
-  };
+  }, [toggleFavorite]);
 
-  const renderRightActions = (note: Note) => {
+  const renderRightActions = useCallback((note: Note) => {
     if (note.deleted_at) {
       return (
         <View style={styles.swipeActionsContainer}>
           <TouchableOpacity
             style={[styles.swipeAction, styles.restoreAction]}
             onPress={() => restoreNote(note)}
+            accessibilityRole="button"
+            accessibilityLabel="Restore note from trash"
           >
             <FontAwesome name="undo" size={24} color="#fff" />
             <Text style={styles.swipeActionText}>Restore</Text>
@@ -224,6 +225,8 @@ export default function NotesScreen() {
           <TouchableOpacity
             style={[styles.swipeAction, styles.deleteAction]}
             onPress={() => deleteNote(note)}
+            accessibilityRole="button"
+            accessibilityLabel="Permanently delete note"
           >
             <FontAwesome name="trash" size={24} color="#fff" />
             <Text style={styles.swipeActionText}>Delete</Text>
@@ -237,6 +240,8 @@ export default function NotesScreen() {
         <TouchableOpacity
           style={[styles.swipeAction, styles.archiveAction]}
           onPress={() => archiveNote(note)}
+          accessibilityRole="button"
+          accessibilityLabel={note.is_archived ? 'Unarchive note' : 'Archive note'}
         >
           <FontAwesome name="archive" size={24} color="#fff" />
           <Text style={styles.swipeActionText}>
@@ -246,52 +251,45 @@ export default function NotesScreen() {
         <TouchableOpacity
           style={[styles.swipeAction, styles.deleteAction]}
           onPress={() => deleteNote(note)}
+          accessibilityRole="button"
+          accessibilityLabel="Move note to trash"
         >
           <FontAwesome name="trash" size={24} color="#fff" />
           <Text style={styles.swipeActionText}>Delete</Text>
         </TouchableOpacity>
       </View>
     );
-  };
+  }, [archiveNote, deleteNote, restoreNote]);
 
-  const renderNote = ({ item }: { item: Note }) => (
+  const renderNote = useCallback(({ item }: { item: Note }) => (
     <Swipeable
       renderLeftActions={() => renderLeftActions(item)}
       renderRightActions={() => renderRightActions(item)}
       overshootLeft={false}
       overshootRight={false}
     >
-      <TouchableOpacity
-        style={[styles.noteCard, isDark && styles.noteCardDark]}
-        onPress={() => router.push(`/(app)/note/${item.id}`)}
-        activeOpacity={0.7}
-      >
-        <View style={styles.noteHeader}>
-          <Text style={[styles.noteTitle, isDark && styles.noteTitleDark]} numberOfLines={1}>
-            {item.title || 'Untitled'}
-          </Text>
-          {item.is_favorite && (
-            <FontAwesome name="star" size={14} color="#f59e0b" />
-          )}
-        </View>
-        <Text style={[styles.notePreview, isDark && styles.notePreviewDark]} numberOfLines={2}>
-          {item.content?.replace(/[#*`]/g, '').slice(0, 100) || 'No content'}
-        </Text>
-        <Text style={[styles.noteDate, isDark && styles.noteDateDark]}>
-          {formatDate(item.updated_at)}
-        </Text>
-      </TouchableOpacity>
+      <NoteCard
+        note={item}
+        isDark={isDark}
+        onPress={() => handleNotePress(item.id)}
+        onToggleFavorite={() => toggleFavorite(item)}
+      />
     </Swipeable>
-  );
+  ), [isDark, handleNotePress, renderLeftActions, renderRightActions, toggleFavorite]);
 
-  const FilterTabs = () => (
-    <View style={[styles.filterTabs, isDark && styles.filterTabsDark]}>
-      {[
-        { key: 'all', label: 'All', icon: 'sticky-note' },
-        { key: 'favorites', label: 'Favorites', icon: 'star' },
-        { key: 'archived', label: 'Archived', icon: 'archive' },
-        { key: 'trash', label: 'Trash', icon: 'trash' },
-      ].map((tab) => (
+  const filterTabs = useMemo(() => [
+    { key: 'all', label: 'All', icon: 'sticky-note' },
+    { key: 'favorites', label: 'Favorites', icon: 'star' },
+    { key: 'archived', label: 'Archived', icon: 'archive' },
+    { key: 'trash', label: 'Trash', icon: 'trash' },
+  ] as const, []);
+
+  const FilterTabs = useMemo(() => (
+    <View
+      style={[styles.filterTabs, isDark && styles.filterTabsDark]}
+      accessibilityRole="tablist"
+    >
+      {filterTabs.map((tab) => (
         <TouchableOpacity
           key={tab.key}
           style={[
@@ -299,6 +297,9 @@ export default function NotesScreen() {
             activeFilter === tab.key && styles.filterTabActive,
           ]}
           onPress={() => setActiveFilter(tab.key as FilterTab)}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeFilter === tab.key }}
+          accessibilityLabel={`${tab.label} notes filter`}
         >
           <FontAwesome
             name={tab.icon as any}
@@ -317,7 +318,7 @@ export default function NotesScreen() {
         </TouchableOpacity>
       ))}
     </View>
-  );
+  ), [isDark, activeFilter, filterTabs]);
 
   const EmptyState = () => (
     <View style={styles.emptyState}>
@@ -344,7 +345,7 @@ export default function NotesScreen() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View style={[styles.container, isDark && styles.containerDark]}>
-        <FilterTabs />
+        {FilterTabs}
         <FlatList
           data={notes}
           renderItem={renderNote}
@@ -361,12 +362,21 @@ export default function NotesScreen() {
             />
           }
           ListEmptyComponent={!isLoading ? EmptyState : null}
+          // Performance optimizations
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          updateCellsBatchingPeriod={50}
+          windowSize={10}
+          initialNumToRender={10}
+          getItemLayout={getItemLayout}
         />
 
         {activeFilter !== 'trash' && (
           <TouchableOpacity
             style={styles.fab}
             onPress={() => router.push('/(app)/note/new')}
+            accessibilityRole="button"
+            accessibilityLabel="Create new note"
           >
             <FontAwesome name="plus" size={24} color="#fff" />
           </TouchableOpacity>
@@ -426,51 +436,6 @@ const styles = StyleSheet.create({
   },
   listContentEmpty: {
     flex: 1,
-  },
-  noteCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  noteCardDark: {
-    backgroundColor: '#1f2937',
-  },
-  noteHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  noteTitle: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  noteTitleDark: {
-    color: '#f9fafb',
-  },
-  notePreview: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginTop: 4,
-    marginBottom: 8,
-    lineHeight: 20,
-  },
-  notePreviewDark: {
-    color: '#9ca3af',
-  },
-  noteDate: {
-    fontSize: 12,
-    color: '#9ca3af',
-  },
-  noteDateDark: {
-    color: '#6b7280',
   },
   swipeActionsContainer: {
     flexDirection: 'row',

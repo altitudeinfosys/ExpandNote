@@ -3,13 +3,14 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { SyncProvider } from '@/contexts/SyncContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
+import { ErrorBoundary as AppErrorBoundary } from '@/components/ErrorBoundary';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -81,18 +82,26 @@ export default function RootLayout() {
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
 
+  const handleError = useCallback((error: Error, errorInfo: React.ErrorInfo) => {
+    // Log error for debugging/analytics
+    console.error('[App Error]', error.message, errorInfo.componentStack);
+    // In production, you would send this to an error reporting service
+  }, []);
+
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <NotificationProvider>
-        <SyncProvider>
-          <AuthGate>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="(app)" />
-            </Stack>
-          </AuthGate>
-        </SyncProvider>
-      </NotificationProvider>
+      <AppErrorBoundary onError={handleError}>
+        <NotificationProvider>
+          <SyncProvider>
+            <AuthGate>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="(auth)" />
+                <Stack.Screen name="(app)" />
+              </Stack>
+            </AuthGate>
+          </SyncProvider>
+        </NotificationProvider>
+      </AppErrorBoundary>
     </ThemeProvider>
   );
 }

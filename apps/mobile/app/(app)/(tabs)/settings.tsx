@@ -32,17 +32,24 @@ type SettingItemProps = {
 };
 
 function SettingItem({ icon, title, subtitle, onPress, isDark, danger, rightElement }: SettingItemProps) {
+  const accessibilityLabel = subtitle ? `${title}. ${subtitle}` : title;
+  const hasInteraction = !!onPress || !!rightElement;
+
   return (
     <TouchableOpacity
       style={[styles.settingItem, isDark && styles.settingItemDark]}
       onPress={onPress}
-      disabled={!onPress && !rightElement}
+      disabled={!hasInteraction}
+      accessibilityRole={onPress ? 'button' : rightElement ? 'none' : 'text'}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={onPress ? `Double tap to ${title.toLowerCase()}` : undefined}
     >
       <View
         style={[
           styles.settingIcon,
           danger ? styles.settingIconDanger : styles.settingIconDefault,
         ]}
+        accessibilityElementsHidden
       >
         <FontAwesome
           name={icon}
@@ -71,6 +78,7 @@ function SettingItem({ icon, title, subtitle, onPress, isDark, danger, rightElem
           name="chevron-right"
           size={14}
           color={isDark ? '#6b7280' : '#9ca3af'}
+          accessibilityElementsHidden
         />
       ))}
     </TouchableOpacity>
@@ -237,6 +245,9 @@ export default function SettingsScreen() {
                     onValueChange={toggleBiometric}
                     trackColor={{ false: '#d1d5db', true: '#93c5fd' }}
                     thumbColor={biometricEnabled ? '#3b82f6' : '#f4f4f5'}
+                    accessibilityLabel="Biometric login toggle"
+                    accessibilityRole="switch"
+                    accessibilityState={{ checked: biometricEnabled }}
                   />
                 }
               />
@@ -302,6 +313,9 @@ export default function SettingsScreen() {
                 }}
                 trackColor={{ false: '#d1d5db', true: '#93c5fd' }}
                 thumbColor={notificationsEnabled ? '#3b82f6' : '#f4f4f5'}
+                accessibilityLabel="Notifications toggle"
+                accessibilityRole="switch"
+                accessibilityState={{ checked: notificationsEnabled }}
               />
             }
           />

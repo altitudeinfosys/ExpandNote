@@ -3,6 +3,9 @@
     "name": "ExpandNote",
     "slug": "expandnote",
     "version": "0.1.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "expandnote",
@@ -16,11 +19,16 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.expandnote.app",
+      "buildNumber": "1",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "infoPlist": {
         "NSFaceIDUsageDescription": "ExpandNote uses Face ID for secure, quick authentication.",
         "NSMicrophoneUsageDescription": "ExpandNote uses the microphone for voice-to-text input in notes.",
         "NSCameraUsageDescription": "ExpandNote uses the camera to capture photos for your notes.",
-        "NSPhotoLibraryUsageDescription": "ExpandNote needs access to your photos to add images to notes."
+        "NSPhotoLibraryUsageDescription": "ExpandNote needs access to your photos to add images to notes.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -29,10 +37,15 @@
         "backgroundColor": "#3b82f6"
       },
       "package": "com.expandnote.app",
+      "versionCode": 1,
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "RECORD_AUDIO"
+        "RECORD_AUDIO",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "VIBRATE"
       ]
     },
     "web": {
