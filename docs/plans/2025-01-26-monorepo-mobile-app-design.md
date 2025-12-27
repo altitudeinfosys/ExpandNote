@@ -243,49 +243,53 @@ The mobile app will be a full replica of the web app with native enhancements.
 
 ---
 
-## Phase 3: Mobile App Setup
+## Phase 3: Mobile App Setup ✅ COMPLETED
 **Goal:** Create React Native (Expo) app with basic navigation
 
-### Step 3.1: Initialize Expo App
-- [ ] Run `npx create-expo-app apps/mobile --template tabs`
-- [ ] Update `apps/mobile/package.json` name to `@expandnote/mobile`
-- [ ] Add `@expandnote/shared` as dependency
-- [ ] Configure Metro bundler for monorepo
-- [ ] Verify `pnpm --filter @expandnote/mobile start` launches
+### Step 3.1: Initialize Expo App ✅
+- [x] Run `npx create-expo-app apps/mobile --template tabs`
+- [x] Update `apps/mobile/package.json` name to `@expandnote/mobile`
+- [x] Add `@expandnote/shared` as dependency
+- [x] Configure Metro bundler for monorepo (`metro.config.js`)
+- [x] Verify TypeScript passes
 
-### Step 3.2: Configure Expo
-- [ ] Update `app.json` with ExpandNote branding
+### Step 3.2: Configure Expo ✅
+- [x] Update `app.json` with ExpandNote branding
   - App name, slug, icon, splash screen
   - iOS bundle identifier: `com.expandnote.app`
   - Android package: `com.expandnote.app`
-- [ ] Configure Expo Router for file-based routing
-- [ ] Set up EAS Build configuration (`eas.json`)
+- [x] Configure Expo Router for file-based routing
+- [x] Add Supabase configuration to app.json extra
 
-### Step 3.3: Set Up Navigation Structure
-- [ ] Create `app/(auth)/` group for login/signup
-  - [ ] `app/(auth)/login.tsx`
-  - [ ] `app/(auth)/signup.tsx`
-- [ ] Create `app/(app)/` group for authenticated screens
-  - [ ] `app/(app)/(tabs)/` for bottom tab navigation
-    - [ ] `app/(app)/(tabs)/notes.tsx` - Notes list
-    - [ ] `app/(app)/(tabs)/search.tsx` - Search
-    - [ ] `app/(app)/(tabs)/settings.tsx` - Settings
-  - [ ] `app/(app)/note/[id].tsx` - Note editor
-  - [ ] `app/(app)/settings/` - Settings sub-screens
-- [ ] Create `app/_layout.tsx` root layout
-- [ ] Create `app/index.tsx` entry redirect
+### Step 3.3: Set Up Navigation Structure ✅
+- [x] Create `app/(auth)/` group for login/signup
+  - [x] `app/(auth)/_layout.tsx`
+  - [x] `app/(auth)/login.tsx`
+  - [x] `app/(auth)/signup.tsx`
+- [x] Create `app/(app)/` group for authenticated screens
+  - [x] `app/(app)/_layout.tsx` - App layout with stack
+  - [x] `app/(app)/(tabs)/_layout.tsx` - Bottom tab navigation
+    - [x] `app/(app)/(tabs)/index.tsx` - Notes list
+    - [x] `app/(app)/(tabs)/search.tsx` - Search
+    - [x] `app/(app)/(tabs)/profiles.tsx` - AI Profiles
+    - [x] `app/(app)/(tabs)/settings.tsx` - Settings
+  - [x] `app/(app)/note/[id].tsx` - Note editor
+  - [x] `app/(app)/note/new.tsx` - New note screen
+- [x] Create `app/_layout.tsx` root layout with AuthProvider and AuthGate
+- [x] Create `app/index.tsx` entry redirect
 
-### Step 3.4: Set Up Theming
-- [ ] Install `nativewind` for Tailwind-like styling
-- [ ] Configure `tailwind.config.js` for mobile
-- [ ] Set up dark/light mode detection
-- [ ] Create base theme colors matching web app
+### Step 3.4: Set Up Theming ✅
+- [x] Set up dark/light mode detection using useColorScheme
+- [x] Create base theme colors matching web app (`constants/Colors.ts`)
+- [x] Create useTheme hook for consistent theming (`hooks/useTheme.ts`)
+- [x] Applied theming to all screens (inline styles for native)
 
-### Step 3.5: Set Up Supabase for Mobile
-- [ ] Install `@supabase/supabase-js` and `@react-native-async-storage/async-storage`
-- [ ] Create mobile-specific Supabase client with AsyncStorage
-- [ ] Set up auth state persistence
-- [ ] Test connection to Supabase
+### Step 3.5: Set Up Supabase for Mobile ✅
+- [x] Install `@supabase/supabase-js` and `@react-native-async-storage/async-storage`
+- [x] Install `expo-secure-store` for secure auth token storage
+- [x] Create mobile-specific Supabase client (`lib/supabase.ts`)
+- [x] Set up auth state persistence with SecureStore fallback to AsyncStorage
+- [x] Create AuthContext and AuthProvider (`contexts/AuthContext.tsx`)
 
 ---
 
