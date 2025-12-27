@@ -14,6 +14,7 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 const BIOMETRIC_ENABLED_KEY = 'biometric_enabled';
 const THEME_KEY = 'user_theme_preference';
@@ -78,6 +79,7 @@ function SettingItem({ icon, title, subtitle, onPress, isDark, danger, rightElem
 
 export default function SettingsScreen() {
   const { user, signOut } = useAuth();
+  const { isEnabled: notificationsEnabled, requestPermissions } = useNotifications();
   const colorScheme = useColorScheme();
   const router = useRouter();
   const isDark = colorScheme === 'dark';
@@ -281,11 +283,27 @@ export default function SettingsScreen() {
           <SettingItem
             icon="bell"
             title="Notifications"
-            subtitle="Manage notification preferences"
-            onPress={() => {
-              Alert.alert('Coming Soon', 'Notification settings will be available in a future update.');
-            }}
+            subtitle={notificationsEnabled ? 'Enabled' : 'Tap to enable'}
             isDark={isDark}
+            rightElement={
+              <Switch
+                value={notificationsEnabled}
+                onValueChange={async (value) => {
+                  if (value && !notificationsEnabled) {
+                    const success = await requestPermissions();
+                    if (!success) {
+                      Alert.alert(
+                        'Notifications Disabled',
+                        'Please enable notifications in your device settings to receive alerts.',
+                        [{ text: 'OK' }]
+                      );
+                    }
+                  }
+                }}
+                trackColor={{ false: '#d1d5db', true: '#93c5fd' }}
+                thumbColor={notificationsEnabled ? '#3b82f6' : '#f4f4f5'}
+              />
+            }
           />
         </View>
       </View>

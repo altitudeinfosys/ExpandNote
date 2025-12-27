@@ -14,6 +14,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Swipeable, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useColorScheme } from '@/components/useColorScheme';
 import { supabase } from '@/lib/supabase';
+import { useHaptics } from '@/hooks/useHaptics';
 import type { Note } from '@expandnote/shared/types';
 
 type FilterTab = 'all' | 'favorites' | 'archived' | 'trash';
@@ -25,6 +26,7 @@ export default function NotesScreen() {
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
   const colorScheme = useColorScheme();
   const router = useRouter();
+  const haptics = useHaptics();
 
   const isDark = colorScheme === 'dark';
 
@@ -72,6 +74,7 @@ export default function NotesScreen() {
   };
 
   const toggleFavorite = async (note: Note) => {
+    haptics.light();
     const newFavorite = !note.is_favorite;
 
     // Optimistic update
@@ -85,6 +88,7 @@ export default function NotesScreen() {
       .eq('id', note.id);
 
     if (error) {
+      haptics.error();
       // Revert on error
       setNotes(prev => prev.map(n =>
         n.id === note.id ? { ...n, is_favorite: !newFavorite } : n
@@ -94,6 +98,7 @@ export default function NotesScreen() {
   };
 
   const archiveNote = async (note: Note) => {
+    haptics.medium();
     const newArchived = !note.is_archived;
 
     // Optimistic update - remove from list if archiving
@@ -107,12 +112,14 @@ export default function NotesScreen() {
       .eq('id', note.id);
 
     if (error) {
+      haptics.error();
       Alert.alert('Error', 'Failed to archive note');
       fetchNotes();
     }
   };
 
   const deleteNote = async (note: Note) => {
+    haptics.warning();
     if (note.deleted_at) {
       // Permanently delete from trash
       Alert.alert(
@@ -124,12 +131,14 @@ export default function NotesScreen() {
             text: 'Delete',
             style: 'destructive',
             onPress: async () => {
+              haptics.heavy();
               setNotes(prev => prev.filter(n => n.id !== note.id));
               const { error } = await supabase
                 .from('notes')
                 .delete()
                 .eq('id', note.id);
               if (error) {
+                haptics.error();
                 Alert.alert('Error', 'Failed to delete note');
                 fetchNotes();
               }
@@ -145,6 +154,7 @@ export default function NotesScreen() {
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', note.id);
       if (error) {
+        haptics.error();
         Alert.alert('Error', 'Failed to delete note');
         fetchNotes();
       }
@@ -152,12 +162,14 @@ export default function NotesScreen() {
   };
 
   const restoreNote = async (note: Note) => {
+    haptics.success();
     setNotes(prev => prev.filter(n => n.id !== note.id));
     const { error } = await supabase
       .from('notes')
       .update({ deleted_at: null })
       .eq('id', note.id);
     if (error) {
+      haptics.error();
       Alert.alert('Error', 'Failed to restore note');
       fetchNotes();
     }

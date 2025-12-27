@@ -10,12 +10,16 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Animated,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useColorScheme } from '@/components/useColorScheme';
 import { supabase } from '@/lib/supabase';
 import { TagSelector } from '@/components/notes/TagSelector';
+import { useVoiceRecording } from '@/hooks/useVoiceRecording';
+import { useHaptics } from '@/hooks/useHaptics';
+import { useImagePicker, ImageAsset } from '@/hooks/useImagePicker';
 import { AUTO_SAVE_DELAY_MS } from '@expandnote/shared/constants';
 import type { Note, Tag } from '@expandnote/shared/types';
 
@@ -23,6 +27,7 @@ export default function NoteScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const colorScheme = useColorScheme();
+  const haptics = useHaptics();
   const isDark = colorScheme === 'dark';
 
   const [note, setNote] = useState<Note | null>(null);
@@ -36,6 +41,30 @@ export default function NoteScreen() {
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const contentInputRef = useRef<TextInput>(null);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  // Voice recording
+  const {
+    isRecording,
+    isProcessing,
+    startRecording,
+    stopRecording,
+    cancelRecording,
+    error: voiceError,
+  } = useVoiceRecording();
+
+  // Image picker
+  const handleImageSelected = (image: ImageAsset) => {
+    haptics.success();
+    // Insert markdown image syntax at end of content
+    const imageMarkdown = `\n\n![Image](${image.uri})\n`;
+    const newContent = content + imageMarkdown;
+    setContent(newContent);
+    setHasChanges(true);
+    scheduleAutoSave();
+  };
+
+  const { showImageOptions, isLoading: isPickingImage } = useImagePicker(handleImageSelected);
 
   useEffect(() => {
     fetchNote();
@@ -45,6 +74,55 @@ export default function NoteScreen() {
       }
     };
   }, [id]);
+
+  // Pulse animation for recording indicator
+  useEffect(() => {
+    if (isRecording) {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.3,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulse.start();
+      return () => pulse.stop();
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [isRecording, pulseAnim]);
+
+  // Handle voice error
+  useEffect(() => {
+    if (voiceError) {
+      Alert.alert('Voice Input Error', voiceError);
+    }
+  }, [voiceError]);
+
+  const handleVoiceInput = async () => {
+    if (isRecording) {
+      haptics.medium();
+      const transcription = await stopRecording();
+      if (transcription) {
+        haptics.success();
+        // Insert transcription at end of content
+        const newContent = content ? `${content}\n\n${transcription}` : transcription;
+        setContent(newContent);
+        setHasChanges(true);
+        scheduleAutoSave();
+      }
+    } else {
+      haptics.light();
+      await startRecording();
+    }
+  };
 
   const fetchNote = async () => {
     if (!id) return;
@@ -294,6 +372,51 @@ export default function NoteScreen() {
 
           {/* Toolbar */}
           <View style={[styles.toolbar, isDark && styles.toolbarDark]}>
+            {/* Voice Input Button */}
+            <TouchableOpacity
+              style={[
+                styles.toolbarButton,
+                styles.voiceButton,
+                isRecording && styles.voiceButtonRecording,
+              ]}
+              onPress={handleVoiceInput}
+              disabled={isProcessing}
+            >
+              {isProcessing ? (
+                <ActivityIndicator size="small" color="#3b82f6" />
+              ) : (
+                <Animated.View style={{ transform: [{ scale: isRecording ? pulseAnim : 1 }] }}>
+                  <FontAwesome
+                    name="microphone"
+                    size={18}
+                    color={isRecording ? '#ef4444' : (isDark ? '#9ca3af' : '#6b7280')}
+                  />
+                </Animated.View>
+              )}
+            </TouchableOpacity>
+
+            {/* Camera Button */}
+            <TouchableOpacity
+              style={styles.toolbarButton}
+              onPress={() => {
+                haptics.light();
+                showImageOptions();
+              }}
+              disabled={isPickingImage}
+            >
+              {isPickingImage ? (
+                <ActivityIndicator size="small" color="#3b82f6" />
+              ) : (
+                <FontAwesome
+                  name="camera"
+                  size={18}
+                  color={isDark ? '#9ca3af' : '#6b7280'}
+                />
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.toolbarDivider} />
+
             <TouchableOpacity
               style={styles.toolbarButton}
               onPress={() => insertMarkdown('**', '**')}
@@ -455,6 +578,19 @@ const styles = StyleSheet.create({
   toolbarButton: {
     padding: 8,
     marginHorizontal: 2,
+  },
+  voiceButton: {
+    paddingHorizontal: 12,
+  },
+  voiceButtonRecording: {
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderRadius: 20,
+  },
+  toolbarDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: '#e5e7eb',
+    marginHorizontal: 8,
   },
   toolbarSpacer: {
     flex: 1,

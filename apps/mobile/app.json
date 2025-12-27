@@ -17,7 +17,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.expandnote.app",
       "infoPlist": {
-        "NSFaceIDUsageDescription": "ExpandNote uses Face ID for secure, quick authentication."
+        "NSFaceIDUsageDescription": "ExpandNote uses Face ID for secure, quick authentication.",
+        "NSMicrophoneUsageDescription": "ExpandNote uses the microphone for voice-to-text input in notes.",
+        "NSCameraUsageDescription": "ExpandNote uses the camera to capture photos for your notes.",
+        "NSPhotoLibraryUsageDescription": "ExpandNote needs access to your photos to add images to notes."
       }
     },
     "android": {
@@ -27,7 +30,10 @@
       },
       "package": "com.expandnote.app",
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -36,7 +42,15 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#3b82f6",
+          "sounds": []
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
@@ -46,7 +60,8 @@
         "projectId": "your-project-id"
       },
       "supabaseUrl": "https://your-project.supabase.co",
-      "supabaseAnonKey": "your-anon-key"
+      "supabaseAnonKey": "your-anon-key",
+      "apiUrl": "https://expand-note.vercel.app"
     }
   }
 }

@@ -9,6 +9,7 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { SyncProvider } from '@/contexts/SyncContext';
+import { NotificationProvider } from '@/contexts/NotificationContext';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -82,14 +83,16 @@ function RootLayoutNav() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <SyncProvider>
-        <AuthGate>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(app)" />
-          </Stack>
-        </AuthGate>
-      </SyncProvider>
+      <NotificationProvider>
+        <SyncProvider>
+          <AuthGate>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="(app)" />
+            </Stack>
+          </AuthGate>
+        </SyncProvider>
+      </NotificationProvider>
     </ThemeProvider>
   );
 }

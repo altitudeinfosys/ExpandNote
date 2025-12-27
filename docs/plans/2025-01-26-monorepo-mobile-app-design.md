@@ -460,51 +460,79 @@ The mobile app will be a full replica of the web app with native enhancements.
 
 ---
 
-## Phase 6: Mobile Enhancements
+## Phase 6: Mobile Enhancements ✅ COMPLETED
 **Goal:** Add native features that improve on web experience
+**Status:** COMPLETE ✅
 
-### Step 6.1: Voice Input
-- [ ] Install `expo-speech` or native speech recognition
-- [ ] Add microphone button to note editor
-- [ ] Implement voice-to-text transcription
-- [ ] Insert transcribed text at cursor
+### Step 6.1: Voice Input ✅
+- [x] Install `expo-av` for audio recording
+- [x] Add microphone button to note editor toolbar
+- [x] Create transcription API endpoint using OpenAI Whisper
+- [x] Create useVoiceRecording hook with recording states
+- [x] Insert transcribed text at end of content
+- [x] Pulse animation while recording
+- [x] Processing indicator during transcription
 
-### Step 6.2: Push Notifications
-- [ ] Install `expo-notifications`
-- [ ] Configure push notification permissions
-- [ ] Set up Expo push notification service
-- [ ] Send notification when AI execution completes
-- [ ] Send notification for sync completion (optional)
+### Step 6.2: Push Notifications ✅
+- [x] Install `expo-notifications` and `expo-device`
+- [x] Configure push notification permissions (iOS + Android)
+- [x] Create NotificationService with channel configuration
+- [x] Create NotificationContext for app-wide notification management
+- [x] Add notification methods for AI complete, sync complete, conflicts
+- [x] Handle notification taps with deep linking to notes
+- [x] Add notification toggle in Settings
 
-### Step 6.3: Haptic Feedback
-- [ ] Install `expo-haptics`
-- [ ] Add haptic feedback on:
-  - Note save
-  - Swipe actions
-  - Button presses
-  - AI execution complete
+### Step 6.3: Haptic Feedback ✅
+- [x] Install `expo-haptics`
+- [x] Create useHaptics hook with typed feedback methods
+- [x] Add haptic feedback on:
+  - [x] Note save (success)
+  - [x] Swipe actions (favorite, archive, delete, restore)
+  - [x] Voice recording start/stop
+  - [x] Image capture
+  - [x] Errors (error feedback)
 
 ### Step 6.4: Share Extension (iOS)
-- [ ] Configure iOS Share Extension
-- [ ] Handle shared text/images
-- [ ] Create note from shared content
-- [ ] Deep link to new note
+- [ ] **DEFERRED** - Requires native module configuration
+- Requires ejecting from Expo managed workflow or using EAS Build
 
 ### Step 6.5: Quick Actions
-- [ ] Configure iOS 3D Touch actions
-- [ ] Configure Android app shortcuts
-- [ ] Actions: New Note, Search, Recent Note
+- [ ] **DEFERRED** - Requires native module configuration
+- Requires ejecting from Expo managed workflow or using EAS Build
 
 ### Step 6.6: Widget
-- [ ] Install `expo-widgets` (or native module)
-- [ ] Create "Quick Note" widget for home screen
-- [ ] Create "Recent Notes" widget
+- [ ] **DEFERRED** - Requires native module configuration
+- Requires ejecting from Expo managed workflow or using EAS Build
 
-### Step 6.7: Camera Integration
-- [ ] Install `expo-camera` and `expo-image-picker`
-- [ ] Add camera button to note editor
-- [ ] Capture and embed image in note
-- [ ] Support gallery image selection
+### Step 6.7: Camera Integration ✅
+- [x] Install `expo-camera` and `expo-image-picker`
+- [x] Create useImagePicker hook with permissions handling
+- [x] Add camera button to note editor toolbar
+- [x] Support camera capture and gallery selection
+- [x] Insert markdown image syntax into note content
+- [x] Configure iOS and Android permissions in app.json
+
+**Files Created:**
+- `hooks/useVoiceRecording.ts` - Audio recording and transcription
+- `hooks/useHaptics.ts` - Haptic feedback utilities
+- `hooks/useImagePicker.ts` - Camera and gallery image selection
+- `lib/notifications.ts` - Notification service
+- `contexts/NotificationContext.tsx` - Notification state management
+- `apps/web/src/app/api/transcribe/route.ts` - Whisper transcription API
+
+**Files Modified:**
+- `app/(app)/note/[id].tsx` - Added voice, camera, haptics to toolbar
+- `app/(app)/(tabs)/index.tsx` - Added haptic feedback to swipe actions
+- `app/(app)/(tabs)/settings.tsx` - Added notification toggle
+- `app/_layout.tsx` - Added NotificationProvider
+- `app.json` - Added permissions and plugins
+
+**Architecture Decisions:**
+- Used expo-av for recording (not expo-speech which is TTS only)
+- Transcription via API endpoint using user's OpenAI key from settings
+- Local notifications (not server push) for immediate feedback
+- Haptic feedback categorized by intensity (light/medium/heavy/success/error)
+- Images embedded as markdown syntax for portability
 
 ---
 
@@ -677,6 +705,17 @@ The mobile app will be a full replica of the web app with native enhancements.
 - Conflict resolution UI shows both versions with clear choices
 - "Keep Both" option creates duplicate with "(Local Copy)" suffix
 - Sync status indicator in Notes header shows current state
+
+**2025-12-26:** Phase 6 (Mobile Enhancements) completed. Key decisions:
+- Used `expo-av` for audio recording (not expo-speech which is TTS only)
+- Created `/api/transcribe` endpoint using OpenAI Whisper for voice-to-text
+- Transcription uses user's OpenAI API key from settings (no server key needed)
+- Local notifications via `expo-notifications` for immediate user feedback
+- Haptic feedback hook (`useHaptics`) provides typed feedback methods
+- Camera integration uses `expo-image-picker` for both capture and gallery
+- Images embedded as markdown syntax `![Image](uri)` for portability
+- Deferred Share Extension, Quick Actions, and Widgets (require EAS Build)
+- Notification toggle added to Settings preferences section
 
 ---
 
