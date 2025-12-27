@@ -109,17 +109,56 @@ The mobile app will be a full replica of the web app with native enhancements.
 
 ## Phase 0: Preparation
 **Goal:** Set up the worktree and validate current state
+**Status:** COMPLETE ✅
 
 ### Step 0.1: Verify Current State
-- [ ] Run `npm run build` to ensure web app builds cleanly
-- [ ] Run `npm run test` to ensure all tests pass
-- [ ] Commit any uncommitted changes to `main`
-- [ ] Document current `package.json` dependencies
+- [x] Run `npm run build` to ensure web app builds cleanly
+- [x] Run `npm run test` to ensure all tests pass (43/43 passed)
+- [x] Commit any uncommitted changes to `main`
+- [x] Document current `package.json` dependencies (see below)
 
 ### Step 0.2: Create Worktree
-- [ ] Create branch `feature/monorepo-migration`
-- [ ] Set up git worktree at `../ExpandNote-monorepo`
-- [ ] Verify worktree is functional
+- [x] Create branch `feature/monorepo-migration`
+- [x] Set up git worktree at `../ExpandNote-monorepo`
+- [x] Verify worktree is functional
+
+### Current Dependencies (Documented 2025-01-26)
+
+**Production Dependencies:**
+| Package | Version | Category | Shareable |
+|---------|---------|----------|-----------|
+| @anthropic-ai/sdk | ^0.68.0 | AI | ✅ Yes |
+| @supabase/ssr | ^0.7.0 | Database | Web-only |
+| @supabase/supabase-js | ^2.75.1 | Database | ✅ Yes |
+| html-to-text | ^9.0.5 | Utils | ✅ Yes |
+| mammoth | ^1.11.0 | File parsing | Web-only |
+| next | ^16.0.7 | Framework | Web-only |
+| openai | ^6.8.1 | AI | ✅ Yes |
+| pdf-parse | ^1.1.4 | File parsing | Web-only |
+| react | 19.1.0 | Framework | ✅ Yes |
+| react-dom | 19.1.0 | Framework | Web-only |
+| react-hot-toast | ^2.6.0 | UI | Web-only |
+| react-markdown | ^10.1.0 | UI | Web-only |
+| rehype-highlight | ^7.0.2 | UI | Web-only |
+| remark-gfm | ^4.0.1 | UI | Web-only |
+| resend | ^6.5.2 | Email | ✅ Yes |
+| zustand | ^5.0.8 | State | ✅ Yes |
+
+**Dev Dependencies:**
+| Package | Version | Purpose |
+|---------|---------|---------|
+| @eslint/eslintrc | ^3 | Linting |
+| @tailwindcss/postcss | ^4 | Styling |
+| @testing-library/jest-dom | ^6.9.1 | Testing |
+| @testing-library/react | ^16.3.0 | Testing |
+| @vitest/ui | ^4.0.13 | Testing |
+| eslint | ^9 | Linting |
+| eslint-config-next | ^16.0.7 | Linting |
+| jsdom | ^27.2.0 | Testing |
+| playwright | ^1.57.0 | E2E Testing |
+| tailwindcss | ^4 | Styling |
+| typescript | ^5 | Language |
+| vitest | ^4.0.13 | Testing |
 
 ---
 
