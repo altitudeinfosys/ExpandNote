@@ -1,21 +1,45 @@
 import { Stack } from 'expo-router';
+import { useSync } from '@/contexts/SyncContext';
+import { ConflictResolutionModal } from '@/components/ConflictResolutionModal';
 
 export default function AppLayout() {
+  const { currentConflict, resolveConflict, dismissConflict } = useSync();
+
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen
-        name="note/[id]"
-        options={{
-          presentation: 'card',
-        }}
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen
+          name="note/[id]"
+          options={{
+            presentation: 'card',
+          }}
+        />
+        <Stack.Screen
+          name="note/new"
+          options={{
+            presentation: 'card',
+          }}
+        />
+        <Stack.Screen
+          name="profile/[id]"
+          options={{
+            presentation: 'card',
+          }}
+        />
+        <Stack.Screen
+          name="tags"
+          options={{
+            presentation: 'card',
+          }}
+        />
+      </Stack>
+      <ConflictResolutionModal
+        visible={currentConflict !== null}
+        conflict={currentConflict}
+        onResolve={resolveConflict}
+        onDismiss={dismissConflict}
       />
-      <Stack.Screen
-        name="note/new"
-        options={{
-          presentation: 'card',
-        }}
-      />
-    </Stack>
+    </>
   );
 }

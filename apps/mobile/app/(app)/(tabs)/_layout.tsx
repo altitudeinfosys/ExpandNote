@@ -1,6 +1,7 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
 import { useColorScheme } from '@/components/useColorScheme';
+import { SyncStatusIndicator } from '@/components/SyncStatusIndicator';
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
@@ -36,6 +37,7 @@ export default function TabLayout() {
         options={{
           title: 'Notes',
           tabBarIcon: ({ color }) => <TabBarIcon name="sticky-note" color={color} />,
+          headerRight: () => <SyncStatusIndicator />,
         }}
       />
       <Tabs.Screen
