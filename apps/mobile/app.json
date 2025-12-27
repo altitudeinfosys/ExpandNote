@@ -15,7 +15,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.expandnote.app"
+      "bundleIdentifier": "com.expandnote.app",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "ExpandNote uses Face ID for secure, quick authentication."
+      }
     },
     "android": {
       "adaptiveIcon": {

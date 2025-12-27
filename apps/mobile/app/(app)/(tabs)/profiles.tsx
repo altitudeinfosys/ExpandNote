@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,24 +7,35 @@ import {
   TouchableOpacity,
   RefreshControl,
   Switch,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useColorScheme } from '@/components/useColorScheme';
 import { supabase } from '@/lib/supabase';
-import type { AIProfile } from '@expandnote/shared/types';
+import type { AIProfile, Tag } from '@expandnote/shared/types';
+
+interface ProfileWithTag extends AIProfile {
+  tag?: Tag;
+}
 
 export default function ProfilesScreen() {
-  const [profiles, setProfiles] = useState<AIProfile[]>([]);
+  const [profiles, setProfiles] = useState<ProfileWithTag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const colorScheme = useColorScheme();
+  const router = useRouter();
 
   const isDark = colorScheme === 'dark';
 
-  const fetchProfiles = async () => {
+  const fetchProfiles = useCallback(async () => {
     const { data, error } = await supabase
       .from('ai_profiles')
-      .select('*')
+      .select(`
+        *,
+        tag:tags(*)
+      `)
       .order('name', { ascending: true });
 
     if (error) {
@@ -34,11 +45,13 @@ export default function ProfilesScreen() {
     }
     setIsLoading(false);
     setIsRefreshing(false);
-  };
-
-  useEffect(() => {
-    fetchProfiles();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchProfiles();
+    }, [fetchProfiles])
+  );
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -67,18 +80,24 @@ export default function ProfilesScreen() {
           p.id === profile.id ? { ...p, is_active: !newActiveState } : p
         )
       );
-      console.error('Error toggling profile:', error);
+      Alert.alert('Error', 'Failed to update profile');
     }
   };
 
-  const getModelIcon = (model: string) => {
-    if (model.includes('gpt')) return 'openai' as const;
-    if (model.includes('claude')) return 'android' as const;
-    return 'robot' as const;
+  const getModelLabel = (model: string): string => {
+    if (model.includes('gpt-4o-mini')) return 'GPT-4o Mini';
+    if (model.includes('gpt-4o')) return 'GPT-4o';
+    if (model.includes('claude-3-5-sonnet')) return 'Claude 3.5 Sonnet';
+    if (model.includes('claude-3-5-haiku')) return 'Claude 3.5 Haiku';
+    return model;
   };
 
-  const renderProfile = ({ item }: { item: AIProfile }) => (
-    <View style={[styles.profileCard, isDark && styles.profileCardDark]}>
+  const renderProfile = ({ item }: { item: ProfileWithTag }) => (
+    <TouchableOpacity
+      style={[styles.profileCard, isDark && styles.profileCardDark]}
+      onPress={() => router.push(`/(app)/profile/${item.id}`)}
+      activeOpacity={0.7}
+    >
       <View style={styles.profileHeader}>
         <View
           style={[
@@ -97,7 +116,7 @@ export default function ProfilesScreen() {
             {item.name}
           </Text>
           <Text style={[styles.profileModel, isDark && styles.profileModelDark]}>
-            {item.model}
+            {getModelLabel(item.model)}
           </Text>
         </View>
         <Switch
@@ -107,13 +126,51 @@ export default function ProfilesScreen() {
           thumbColor={item.is_active ? '#3b82f6' : '#f9fafb'}
         />
       </View>
-      {item.tag_id && item.trigger_mode === 'automatic' && (
-        <View style={styles.triggerBadge}>
-          <FontAwesome name="tag" size={12} color="#6b7280" />
-          <Text style={styles.triggerText}>Auto-triggers on tag</Text>
+
+      {/* Profile metadata */}
+      <View style={styles.profileMeta}>
+        <View style={styles.metaItem}>
+          <FontAwesome
+            name={item.trigger_mode === 'automatic' ? 'bolt' : 'hand-pointer-o'}
+            size={12}
+            color={isDark ? '#9ca3af' : '#6b7280'}
+          />
+          <Text style={[styles.metaText, isDark && styles.metaTextDark]}>
+            {item.trigger_mode === 'automatic' ? 'Automatic' : 'Manual'}
+          </Text>
         </View>
-      )}
-    </View>
+
+        <View style={styles.metaItem}>
+          <FontAwesome
+            name={
+              item.output_behavior === 'append' ? 'plus' :
+              item.output_behavior === 'replace' ? 'exchange' : 'file-text-o'
+            }
+            size={12}
+            color={isDark ? '#9ca3af' : '#6b7280'}
+          />
+          <Text style={[styles.metaText, isDark && styles.metaTextDark]}>
+            {item.output_behavior === 'append' ? 'Append' :
+             item.output_behavior === 'replace' ? 'Replace' : 'New note'}
+          </Text>
+        </View>
+
+        {item.tag && item.trigger_mode === 'automatic' && (
+          <View style={[styles.metaItem, styles.tagBadge, isDark && styles.tagBadgeDark]}>
+            <FontAwesome name="tag" size={10} color="#3b82f6" />
+            <Text style={styles.tagText}>{item.tag.name}</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Prompt preview */}
+      <Text
+        style={[styles.promptPreview, isDark && styles.promptPreviewDark]}
+        numberOfLines={2}
+      >
+        {item.user_prompt_template || item.system_prompt}
+      </Text>
+    </TouchableOpacity>
   );
 
   const EmptyState = () => (
@@ -127,30 +184,52 @@ export default function ProfilesScreen() {
         No AI Profiles
       </Text>
       <Text style={[styles.emptySubtext, isDark && styles.emptySubtextDark]}>
-        Create AI profiles on the web app to automate your note processing
+        Create AI profiles to automate your note processing
       </Text>
+      <TouchableOpacity
+        style={styles.emptyButton}
+        onPress={() => router.push('/(app)/profile/new')}
+      >
+        <FontAwesome name="plus" size={14} color="#fff" />
+        <Text style={styles.emptyButtonText}>Create Profile</Text>
+      </TouchableOpacity>
     </View>
   );
 
   return (
     <View style={[styles.container, isDark && styles.containerDark]}>
-      <FlatList
-        data={profiles}
-        renderItem={renderProfile}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[
-          styles.listContent,
-          profiles.length === 0 && styles.listContentEmpty,
-        ]}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            tintColor={isDark ? '#60a5fa' : '#3b82f6'}
-          />
-        }
-        ListEmptyComponent={!isLoading ? EmptyState : null}
-      />
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#3b82f6" />
+        </View>
+      ) : (
+        <FlatList
+          data={profiles}
+          renderItem={renderProfile}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={[
+            styles.listContent,
+            profiles.length === 0 && styles.listContentEmpty,
+          ]}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor={isDark ? '#60a5fa' : '#3b82f6'}
+            />
+          }
+          ListEmptyComponent={EmptyState}
+        />
+      )}
+
+      {profiles.length > 0 && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => router.push('/(app)/profile/new')}
+        >
+          <FontAwesome name="plus" size={24} color="#fff" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -162,6 +241,11 @@ const styles = StyleSheet.create({
   },
   containerDark: {
     backgroundColor: '#111827',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   listContent: {
     padding: 16,
@@ -214,18 +298,51 @@ const styles = StyleSheet.create({
   profileModelDark: {
     color: '#9ca3af',
   },
-  triggerBadge: {
+  profileMeta: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 12,
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metaText: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  metaTextDark: {
+    color: '#9ca3af',
+  },
+  tagBadge: {
+    backgroundColor: '#dbeafe',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  tagBadgeDark: {
+    backgroundColor: '#1e3a5f',
+  },
+  tagText: {
+    fontSize: 11,
+    color: '#3b82f6',
+    fontWeight: '500',
+  },
+  promptPreview: {
+    fontSize: 13,
+    color: '#6b7280',
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#e5e7eb',
-    gap: 6,
+    lineHeight: 18,
   },
-  triggerText: {
-    fontSize: 12,
-    color: '#6b7280',
+  promptPreviewDark: {
+    color: '#9ca3af',
+    borderTopColor: '#374151',
   },
   emptyState: {
     flex: 1,
@@ -250,5 +367,36 @@ const styles = StyleSheet.create({
   },
   emptySubtextDark: {
     color: '#6b7280',
+  },
+  emptyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 24,
+  },
+  emptyButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#3b82f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
 });

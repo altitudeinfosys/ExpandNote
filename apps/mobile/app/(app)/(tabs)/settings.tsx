@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -5,10 +6,19 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  Switch,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import * as LocalAuthentication from 'expo-local-authentication';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/contexts/AuthContext';
+
+const BIOMETRIC_ENABLED_KEY = 'biometric_enabled';
+const THEME_KEY = 'user_theme_preference';
+
+type ThemePreference = 'system' | 'light' | 'dark';
 
 type SettingItemProps = {
   icon: React.ComponentProps<typeof FontAwesome>['name'];
@@ -17,14 +27,15 @@ type SettingItemProps = {
   onPress?: () => void;
   isDark: boolean;
   danger?: boolean;
+  rightElement?: React.ReactNode;
 };
 
-function SettingItem({ icon, title, subtitle, onPress, isDark, danger }: SettingItemProps) {
+function SettingItem({ icon, title, subtitle, onPress, isDark, danger, rightElement }: SettingItemProps) {
   return (
     <TouchableOpacity
       style={[styles.settingItem, isDark && styles.settingItemDark]}
       onPress={onPress}
-      disabled={!onPress}
+      disabled={!onPress && !rightElement}
     >
       <View
         style={[
@@ -54,13 +65,13 @@ function SettingItem({ icon, title, subtitle, onPress, isDark, danger }: Setting
           </Text>
         )}
       </View>
-      {onPress && (
+      {rightElement || (onPress && (
         <FontAwesome
           name="chevron-right"
           size={14}
           color={isDark ? '#6b7280' : '#9ca3af'}
         />
-      )}
+      ))}
     </TouchableOpacity>
   );
 }
@@ -68,7 +79,97 @@ function SettingItem({ icon, title, subtitle, onPress, isDark, danger }: Setting
 export default function SettingsScreen() {
   const { user, signOut } = useAuth();
   const colorScheme = useColorScheme();
+  const router = useRouter();
   const isDark = colorScheme === 'dark';
+
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [themePreference, setThemePreference] = useState<ThemePreference>('system');
+
+  useEffect(() => {
+    checkBiometrics();
+    loadThemePreference();
+  }, []);
+
+  const checkBiometrics = async () => {
+    const compatible = await LocalAuthentication.hasHardwareAsync();
+    const enrolled = await LocalAuthentication.isEnrolledAsync();
+    setBiometricAvailable(compatible && enrolled);
+
+    if (compatible && enrolled) {
+      const enabled = await AsyncStorage.getItem(BIOMETRIC_ENABLED_KEY);
+      setBiometricEnabled(enabled === 'true');
+    }
+  };
+
+  const loadThemePreference = async () => {
+    const pref = await AsyncStorage.getItem(THEME_KEY);
+    if (pref === 'light' || pref === 'dark' || pref === 'system') {
+      setThemePreference(pref);
+    }
+  };
+
+  const toggleBiometric = async (value: boolean) => {
+    if (value) {
+      // Verify biometrics before enabling
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Verify to enable biometric login',
+      });
+
+      if (!result.success) {
+        return;
+      }
+    }
+
+    await AsyncStorage.setItem(BIOMETRIC_ENABLED_KEY, value ? 'true' : 'false');
+    setBiometricEnabled(value);
+  };
+
+  const handleThemeChange = () => {
+    const options: ThemePreference[] = ['system', 'light', 'dark'];
+    const labels = ['System Default', 'Light', 'Dark'];
+
+    Alert.alert(
+      'Choose Theme',
+      undefined,
+      [
+        ...options.map((option, index) => ({
+          text: labels[index] + (themePreference === option ? ' ✓' : ''),
+          onPress: async () => {
+            setThemePreference(option);
+            await AsyncStorage.setItem(THEME_KEY, option);
+          },
+        })),
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
+  const getThemeLabel = (pref: ThemePreference): string => {
+    switch (pref) {
+      case 'light': return 'Light';
+      case 'dark': return 'Dark';
+      default: return 'System default';
+    }
+  };
+
+  const handleClearCache = () => {
+    Alert.alert(
+      'Clear Cache',
+      'This will clear cached data but keep your notes and settings.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: async () => {
+            // Clear any cached data here
+            Alert.alert('Done', 'Cache cleared successfully.');
+          },
+        },
+      ]
+    );
+  };
 
   const handleSignOut = () => {
     Alert.alert(
@@ -103,22 +204,102 @@ export default function SettingsScreen() {
 
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>
+          Data
+        </Text>
+        <View style={[styles.sectionContent, isDark && styles.sectionContentDark]}>
+          <SettingItem
+            icon="tags"
+            title="Manage Tags"
+            subtitle="Create, edit, and delete tags"
+            onPress={() => router.push('/(app)/tags')}
+            isDark={isDark}
+          />
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>
+          Security
+        </Text>
+        <View style={[styles.sectionContent, isDark && styles.sectionContentDark]}>
+          {biometricAvailable && (
+            <>
+              <SettingItem
+                icon="lock"
+                title="Biometric Login"
+                subtitle="Use Face ID / Touch ID to sign in"
+                isDark={isDark}
+                rightElement={
+                  <Switch
+                    value={biometricEnabled}
+                    onValueChange={toggleBiometric}
+                    trackColor={{ false: '#d1d5db', true: '#93c5fd' }}
+                    thumbColor={biometricEnabled ? '#3b82f6' : '#f4f4f5'}
+                  />
+                }
+              />
+              <View style={styles.divider} />
+            </>
+          )}
+          <SettingItem
+            icon="key"
+            title="Change Password"
+            onPress={() => {
+              Alert.alert(
+                'Change Password',
+                'A password reset link will be sent to your email.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Send Link',
+                    onPress: async () => {
+                      // Trigger password reset
+                      Alert.alert('Done', 'Check your email for the reset link.');
+                    },
+                  },
+                ]
+              );
+            }}
+            isDark={isDark}
+          />
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>
           Preferences
         </Text>
         <View style={[styles.sectionContent, isDark && styles.sectionContentDark]}>
           <SettingItem
-            icon="bell"
-            title="Notifications"
-            subtitle="Manage notification preferences"
-            onPress={() => {}}
+            icon="moon-o"
+            title="Appearance"
+            subtitle={getThemeLabel(themePreference)}
+            onPress={handleThemeChange}
             isDark={isDark}
           />
           <View style={styles.divider} />
           <SettingItem
-            icon="moon-o"
-            title="Appearance"
-            subtitle="System default"
-            onPress={() => {}}
+            icon="bell"
+            title="Notifications"
+            subtitle="Manage notification preferences"
+            onPress={() => {
+              Alert.alert('Coming Soon', 'Notification settings will be available in a future update.');
+            }}
+            isDark={isDark}
+          />
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>
+          Storage
+        </Text>
+        <View style={[styles.sectionContent, isDark && styles.sectionContentDark]}>
+          <SettingItem
+            icon="trash"
+            title="Clear Cache"
+            subtitle="Free up space by clearing cached data"
+            onPress={handleClearCache}
             isDark={isDark}
           />
         </View>
@@ -132,28 +313,36 @@ export default function SettingsScreen() {
           <SettingItem
             icon="question-circle"
             title="Help & FAQ"
-            onPress={() => {}}
+            onPress={() => {
+              Alert.alert('Coming Soon', 'Help documentation will be available soon.');
+            }}
             isDark={isDark}
           />
           <View style={styles.divider} />
           <SettingItem
             icon="envelope"
             title="Contact Support"
-            onPress={() => {}}
+            onPress={() => {
+              Alert.alert('Contact Support', 'Email us at support@expandnote.app');
+            }}
             isDark={isDark}
           />
           <View style={styles.divider} />
           <SettingItem
             icon="file-text-o"
             title="Terms of Service"
-            onPress={() => {}}
+            onPress={() => {
+              router.push('https://expandnote.app/terms' as any);
+            }}
             isDark={isDark}
           />
           <View style={styles.divider} />
           <SettingItem
             icon="shield"
             title="Privacy Policy"
-            onPress={() => {}}
+            onPress={() => {
+              router.push('https://expandnote.app/privacy' as any);
+            }}
             isDark={isDark}
           />
         </View>

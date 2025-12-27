@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -6,61 +6,207 @@ import {
   TextInput,
   FlatList,
   TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useColorScheme } from '@/components/useColorScheme';
 import { supabase } from '@/lib/supabase';
-import type { Note } from '@expandnote/shared/types';
+import type { Note, Tag } from '@expandnote/shared/types';
+import { SEARCH_DEBOUNCE_MS } from '@expandnote/shared/constants';
+
+interface NoteWithTags extends Omit<Note, 'tags'> {
+  tags?: { tag: Tag }[];
+}
 
 export default function SearchScreen() {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Note[]>([]);
+  const [results, setResults] = useState<NoteWithTags[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [allTags, setAllTags] = useState<Tag[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const colorScheme = useColorScheme();
   const router = useRouter();
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isDark = colorScheme === 'dark';
 
-  const handleSearch = async (searchQuery: string) => {
-    setQuery(searchQuery);
+  useEffect(() => {
+    fetchTags();
+  }, []);
 
-    if (searchQuery.length < 2) {
+  const fetchTags = async () => {
+    const { data, error } = await supabase
+      .from('tags')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (!error && data) {
+      setAllTags(data);
+    }
+  };
+
+  const performSearch = useCallback(async (searchQuery: string, tagIds: string[]) => {
+    if (searchQuery.length < 2 && tagIds.length === 0) {
       setResults([]);
+      setIsSearching(false);
       return;
     }
 
     setIsSearching(true);
 
-    const { data, error } = await supabase
+    let notesQuery = supabase
       .from('notes')
-      .select('*')
-      .or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%`)
+      .select(`
+        *,
+        tags:note_tags(tag:tags(*))
+      `)
+      .is('deleted_at', null)
       .order('updated_at', { ascending: false })
-      .limit(20);
+      .limit(30);
+
+    // Text search
+    if (searchQuery.length >= 2) {
+      notesQuery = notesQuery.or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%`);
+    }
+
+    const { data, error } = await notesQuery;
 
     if (error) {
       console.error('Search error:', error);
-    } else {
-      setResults(data || []);
+      setIsSearching(false);
+      return;
     }
 
+    let filteredResults = data || [];
+
+    // Filter by selected tags
+    if (tagIds.length > 0) {
+      filteredResults = filteredResults.filter(note => {
+        const noteTags = note.tags?.map((t: any) => t.tag?.id).filter(Boolean) || [];
+        return tagIds.some(tagId => noteTags.includes(tagId));
+      });
+    }
+
+    setResults(filteredResults);
     setIsSearching(false);
+  }, []);
+
+  const handleSearch = (searchQuery: string) => {
+    setQuery(searchQuery);
+
+    // Debounce search
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      performSearch(searchQuery, selectedTags);
+    }, SEARCH_DEBOUNCE_MS);
   };
 
-  const renderResult = ({ item }: { item: Note }) => (
-    <TouchableOpacity
-      style={[styles.resultCard, isDark && styles.resultCardDark]}
-      onPress={() => router.push(`/(app)/note/${item.id}`)}
-    >
-      <Text style={[styles.resultTitle, isDark && styles.resultTitleDark]} numberOfLines={1}>
-        {item.title || 'Untitled'}
+  const toggleTagFilter = (tagId: string) => {
+    const newSelectedTags = selectedTags.includes(tagId)
+      ? selectedTags.filter(id => id !== tagId)
+      : [...selectedTags, tagId];
+
+    setSelectedTags(newSelectedTags);
+    performSearch(query, newSelectedTags);
+  };
+
+  const clearFilters = () => {
+    setSelectedTags([]);
+    if (query.length >= 2) {
+      performSearch(query, []);
+    } else {
+      setResults([]);
+    }
+  };
+
+  // Highlight matching text
+  const highlightText = (text: string, searchTerm: string) => {
+    if (!searchTerm || searchTerm.length < 2) {
+      return <Text>{text}</Text>;
+    }
+
+    const parts = text.split(new RegExp(`(${searchTerm})`, 'gi'));
+
+    return (
+      <Text>
+        {parts.map((part, index) =>
+          part.toLowerCase() === searchTerm.toLowerCase() ? (
+            <Text key={index} style={styles.highlight}>{part}</Text>
+          ) : (
+            <Text key={index}>{part}</Text>
+          )
+        )}
       </Text>
-      <Text style={[styles.resultPreview, isDark && styles.resultPreviewDark]} numberOfLines={2}>
-        {item.content?.replace(/[#*`]/g, '').slice(0, 100) || 'No content'}
-      </Text>
-    </TouchableOpacity>
-  );
+    );
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else if (diffDays === 1) {
+      return 'Yesterday';
+    } else if (diffDays < 7) {
+      return `${diffDays} days ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
+  };
+
+  const renderResult = ({ item }: { item: NoteWithTags }) => {
+    const noteTags = item.tags?.map((t: any) => t.tag).filter(Boolean) || [];
+    const titleText = item.title || 'Untitled';
+    const previewText = item.content?.replace(/[#*`]/g, '').slice(0, 100) || 'No content';
+
+    return (
+      <TouchableOpacity
+        style={[styles.resultCard, isDark && styles.resultCardDark]}
+        onPress={() => router.push(`/(app)/note/${item.id}`)}
+      >
+        <View style={styles.resultHeader}>
+          <Text style={[styles.resultTitle, isDark && styles.resultTitleDark]} numberOfLines={1}>
+            {highlightText(titleText, query)}
+          </Text>
+          {item.is_favorite && (
+            <FontAwesome name="star" size={12} color="#f59e0b" />
+          )}
+        </View>
+        <Text style={[styles.resultPreview, isDark && styles.resultPreviewDark]} numberOfLines={2}>
+          {highlightText(previewText, query)}
+        </Text>
+        <View style={styles.resultFooter}>
+          <Text style={[styles.resultDate, isDark && styles.resultDateDark]}>
+            {formatDate(item.updated_at)}
+          </Text>
+          {noteTags.length > 0 && (
+            <View style={styles.resultTags}>
+              {noteTags.slice(0, 3).map((tag: Tag) => (
+                <View key={tag.id} style={[styles.resultTagChip, isDark && styles.resultTagChipDark]}>
+                  <Text style={[styles.resultTagText, isDark && styles.resultTagTextDark]}>
+                    {tag.name}
+                  </Text>
+                </View>
+              ))}
+              {noteTags.length > 3 && (
+                <Text style={[styles.moreTagsText, isDark && styles.moreTagsTextDark]}>
+                  +{noteTags.length - 3}
+                </Text>
+              )}
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const EmptyState = () => (
     <View style={styles.emptyState}>
@@ -70,13 +216,21 @@ export default function SearchScreen() {
         color={isDark ? '#4b5563' : '#9ca3af'}
       />
       <Text style={[styles.emptyText, isDark && styles.emptyTextDark]}>
-        {query.length > 0 ? 'No results found' : 'Search your notes'}
+        {query.length > 0 || selectedTags.length > 0
+          ? 'No results found'
+          : 'Search your notes'}
+      </Text>
+      <Text style={[styles.emptySubtext, isDark && styles.emptySubtextDark]}>
+        {query.length > 0 || selectedTags.length > 0
+          ? 'Try different keywords or filters'
+          : 'Type to search or select tags to filter'}
       </Text>
     </View>
   );
 
   return (
     <View style={[styles.container, isDark && styles.containerDark]}>
+      {/* Search Input */}
       <View style={[styles.searchContainer, isDark && styles.searchContainerDark]}>
         <FontAwesome
           name="search"
@@ -93,7 +247,10 @@ export default function SearchScreen() {
           autoCapitalize="none"
           autoCorrect={false}
         />
-        {query.length > 0 && (
+        {isSearching && (
+          <ActivityIndicator size="small" color="#3b82f6" style={{ marginRight: 8 }} />
+        )}
+        {query.length > 0 && !isSearching && (
           <TouchableOpacity onPress={() => handleSearch('')}>
             <FontAwesome
               name="times-circle"
@@ -104,6 +261,67 @@ export default function SearchScreen() {
         )}
       </View>
 
+      {/* Tag Filters */}
+      {allTags.length > 0 && (
+        <View style={styles.filterSection}>
+          <View style={styles.filterHeader}>
+            <Text style={[styles.filterLabel, isDark && styles.filterLabelDark]}>
+              Filter by tags
+            </Text>
+            {selectedTags.length > 0 && (
+              <TouchableOpacity onPress={clearFilters}>
+                <Text style={styles.clearText}>Clear</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tagsScroll}
+          >
+            {allTags.map(tag => {
+              const isSelected = selectedTags.includes(tag.id);
+              return (
+                <TouchableOpacity
+                  key={tag.id}
+                  style={[
+                    styles.tagFilter,
+                    isDark && styles.tagFilterDark,
+                    isSelected && styles.tagFilterSelected,
+                  ]}
+                  onPress={() => toggleTagFilter(tag.id)}
+                >
+                  <FontAwesome
+                    name="tag"
+                    size={12}
+                    color={isSelected ? '#fff' : (isDark ? '#9ca3af' : '#6b7280')}
+                  />
+                  <Text
+                    style={[
+                      styles.tagFilterText,
+                      isDark && styles.tagFilterTextDark,
+                      isSelected && styles.tagFilterTextSelected,
+                    ]}
+                  >
+                    {tag.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Results Count */}
+      {(query.length >= 2 || selectedTags.length > 0) && !isSearching && (
+        <View style={styles.resultsHeader}>
+          <Text style={[styles.resultsCount, isDark && styles.resultsCountDark]}>
+            {results.length} {results.length === 1 ? 'result' : 'results'}
+          </Text>
+        </View>
+      )}
+
+      {/* Results List */}
       <FlatList
         data={results}
         renderItem={renderResult}
@@ -112,7 +330,7 @@ export default function SearchScreen() {
           styles.listContent,
           results.length === 0 && styles.listContentEmpty,
         ]}
-        ListEmptyComponent={EmptyState}
+        ListEmptyComponent={!isSearching ? EmptyState : null}
       />
     </View>
   );
@@ -131,6 +349,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
     margin: 16,
+    marginBottom: 8,
     paddingHorizontal: 16,
     borderRadius: 12,
     borderWidth: 1,
@@ -152,9 +371,72 @@ const styles = StyleSheet.create({
   searchInputDark: {
     color: '#f9fafb',
   },
+  filterSection: {
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+  filterHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  filterLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  filterLabelDark: {
+    color: '#9ca3af',
+  },
+  clearText: {
+    fontSize: 13,
+    color: '#3b82f6',
+    fontWeight: '500',
+  },
+  tagsScroll: {
+    gap: 8,
+  },
+  tagFilter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f3f4f6',
+  },
+  tagFilterDark: {
+    backgroundColor: '#374151',
+  },
+  tagFilterSelected: {
+    backgroundColor: '#3b82f6',
+  },
+  tagFilterText: {
+    fontSize: 13,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  tagFilterTextDark: {
+    color: '#9ca3af',
+  },
+  tagFilterTextSelected: {
+    color: '#fff',
+  },
+  resultsHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  resultsCount: {
+    fontSize: 13,
+    color: '#6b7280',
+  },
+  resultsCountDark: {
+    color: '#9ca3af',
+  },
   listContent: {
     padding: 16,
-    paddingTop: 0,
+    paddingTop: 8,
     gap: 12,
   },
   listContentEmpty: {
@@ -173,11 +455,17 @@ const styles = StyleSheet.create({
   resultCardDark: {
     backgroundColor: '#1f2937',
   },
+  resultHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
   resultTitle: {
+    flex: 1,
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
-    marginBottom: 4,
   },
   resultTitleDark: {
     color: '#f9fafb',
@@ -186,9 +474,55 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     lineHeight: 20,
+    marginTop: 4,
   },
   resultPreviewDark: {
     color: '#9ca3af',
+  },
+  resultFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+  },
+  resultDate: {
+    fontSize: 12,
+    color: '#9ca3af',
+  },
+  resultDateDark: {
+    color: '#6b7280',
+  },
+  resultTags: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  resultTagChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    backgroundColor: '#e5e7eb',
+  },
+  resultTagChipDark: {
+    backgroundColor: '#374151',
+  },
+  resultTagText: {
+    fontSize: 11,
+    color: '#6b7280',
+  },
+  resultTagTextDark: {
+    color: '#9ca3af',
+  },
+  moreTagsText: {
+    fontSize: 11,
+    color: '#9ca3af',
+  },
+  moreTagsTextDark: {
+    color: '#6b7280',
+  },
+  highlight: {
+    backgroundColor: '#fef08a',
+    color: '#854d0e',
   },
   emptyState: {
     flex: 1,
@@ -197,11 +531,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: '600',
     color: '#6b7280',
     marginTop: 16,
   },
   emptyTextDark: {
     color: '#9ca3af',
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#9ca3af',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  emptySubtextDark: {
+    color: '#6b7280',
   },
 });
