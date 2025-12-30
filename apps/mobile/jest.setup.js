@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import '@testing-library/react-native/extend-expect';
+// Note: @testing-library/react-native v12.4+ includes jest matchers built-in
+// No need for separate extend-expect import
 
 // Mock expo-router
 jest.mock('expo-router', () => ({
@@ -111,11 +112,21 @@ jest.mock('react-native-gesture-handler', () => {
   };
 });
 
-// Mock @react-native-community/netinfo
+// Mock react-native-safe-area-context
+jest.mock('react-native-safe-area-context', () => {
+  const View = require('react-native').View;
+  return {
+    SafeAreaView: View,
+    SafeAreaProvider: ({ children }) => children,
+    useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
+  };
+});
+
+// Mock @react-native-community/netinfo (virtual - not installed as dependency)
 jest.mock('@react-native-community/netinfo', () => ({
   fetch: jest.fn(() => Promise.resolve({ isConnected: true })),
   addEventListener: jest.fn(() => jest.fn()),
-}));
+}), { virtual: true });
 
 // Silence console warnings in tests
 const originalWarn = console.warn;

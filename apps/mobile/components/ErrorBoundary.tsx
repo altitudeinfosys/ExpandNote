@@ -4,8 +4,8 @@ import {
   Text,
   View,
   TouchableOpacity,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 interface Props {

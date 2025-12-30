@@ -156,7 +156,7 @@ describe('NoteCard', () => {
   });
 
   it('applies dark mode styles correctly', () => {
-    const { getByTestId } = render(
+    const { getByLabelText } = render(
       <NoteCard
         note={mockNote}
         isDark={true}

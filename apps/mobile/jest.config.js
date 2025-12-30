@@ -1,7 +1,20 @@
 module.exports = {
   preset: 'jest-expo',
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|@expandnote/shared)',
+    // Handle pnpm's .pnpm folder structure
+    'node_modules/(?!(.pnpm|' +
+      '(jest-)?react-native|' +
+      '@react-native(-community)?|' +
+      'expo(nent)?|' +
+      '@expo(nent)?/.*|' +
+      '@expo-google-fonts/.*|' +
+      'react-navigation|' +
+      '@react-navigation/.*|' +
+      '@sentry/react-native|' +
+      'native-base|' +
+      'react-native-svg|' +
+      '@expandnote/shared' +
+    '))',
   ],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
@@ -25,6 +38,6 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
-  testEnvironment: 'jsdom',
+  testEnvironment: 'node',
   clearMocks: true,
 };
