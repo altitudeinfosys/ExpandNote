@@ -72,8 +72,8 @@
       "eas": {
         "projectId": "your-project-id"
       },
-      "supabaseUrl": "https://your-project.supabase.co",
-      "supabaseAnonKey": "your-anon-key",
+      "supabaseUrl": "https://dtgxsrpxxdhzjaxevhwp.supabase.co",
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0Z3hzcnB4eGRoempheGV2aHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA4ODAwMzUsImV4cCI6MjA3NjQ1NjAzNX0.uyJBDnVtXLgLU1kYRI3kUa9mTFMpcG5TmZzfaSkgcbY",
       "apiUrl": "https://expand-note.vercel.app"
     }
   }

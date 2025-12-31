@@ -13,24 +13,28 @@ export default function AppLayout() {
           name="note/[id]"
           options={{
             presentation: 'card',
+            headerShown: true,
           }}
         />
         <Stack.Screen
           name="note/new"
           options={{
             presentation: 'card',
+            headerShown: true,
           }}
         />
         <Stack.Screen
           name="profile/[id]"
           options={{
             presentation: 'card',
+            headerShown: true,
           }}
         />
         <Stack.Screen
           name="tags"
           options={{
             presentation: 'card',
+            headerShown: true,
           }}
         />
       </Stack>

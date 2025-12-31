@@ -8,6 +8,8 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -113,29 +115,38 @@ export default function NewNoteScreen() {
           ),
         }}
       />
-      <ScrollView
-        style={[styles.container, isDark && styles.containerDark]}
-        keyboardDismissMode="interactive"
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
       >
-        <TextInput
-          style={[styles.titleInput, isDark && styles.titleInputDark]}
-          value={title}
-          onChangeText={setTitle}
-          placeholder="Note title"
-          placeholderTextColor={isDark ? '#6b7280' : '#9ca3af'}
-          multiline
-          autoFocus
-        />
-        <TextInput
-          style={[styles.contentInput, isDark && styles.contentInputDark]}
-          value={content}
-          onChangeText={setContent}
-          placeholder="Start writing..."
-          placeholderTextColor={isDark ? '#6b7280' : '#9ca3af'}
-          multiline
-          textAlignVertical="top"
-        />
-      </ScrollView>
+        <ScrollView
+          style={[styles.container, isDark && styles.containerDark]}
+          contentContainerStyle={styles.scrollContent}
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+        >
+          <TextInput
+            style={[styles.titleInput, isDark && styles.titleInputDark]}
+            value={title}
+            onChangeText={setTitle}
+            placeholder="Note title"
+            placeholderTextColor={isDark ? '#6b7280' : '#9ca3af'}
+            multiline
+            autoFocus
+          />
+          <TextInput
+            style={[styles.contentInput, isDark && styles.contentInputDark]}
+            value={content}
+            onChangeText={setContent}
+            placeholder="Start writing..."
+            placeholderTextColor={isDark ? '#6b7280' : '#9ca3af'}
+            multiline
+            textAlignVertical="top"
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
     </>
   );
 }
@@ -147,6 +158,10 @@ const styles = StyleSheet.create({
   },
   containerDark: {
     backgroundColor: '#111827',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 100,
   },
   headerButton: {
     padding: 8,

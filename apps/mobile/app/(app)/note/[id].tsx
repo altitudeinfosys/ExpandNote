@@ -17,9 +17,11 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useColorScheme } from '@/components/useColorScheme';
 import { supabase } from '@/lib/supabase';
 import { TagSelector } from '@/components/notes/TagSelector';
+import { AIProfileBottomSheet } from '@/components/AIProfileBottomSheet';
 import { useVoiceRecording } from '@/hooks/useVoiceRecording';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useImagePicker, ImageAsset } from '@/hooks/useImagePicker';
+import { useAIProfiles } from '@/hooks/useAIProfiles';
 import { AUTO_SAVE_DELAY_MS } from '@expandnote/shared/constants';
 import type { Note, Tag } from '@expandnote/shared/types';
 
@@ -38,6 +40,7 @@ export default function NoteScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [showAIProfiles, setShowAIProfiles] = useState(false);
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const contentInputRef = useRef<TextInput>(null);
@@ -65,6 +68,18 @@ export default function NoteScreen() {
   };
 
   const { showImageOptions, isLoading: isPickingImage } = useImagePicker(handleImageSelected);
+
+  // AI Profiles
+  const {
+    profiles: aiProfiles,
+    executeProfile,
+    executingProfileId,
+  } = useAIProfiles(tags);
+
+  const handleExecuteAIProfile = useCallback(async (profileId: string) => {
+    if (!id) return;
+    await executeProfile(profileId, id);
+  }, [id, executeProfile]);
 
   useEffect(() => {
     fetchNote();
@@ -347,11 +362,14 @@ export default function NoteScreen() {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
-        keyboardVerticalOffset={88}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
       >
         <ScrollView
           style={[styles.container, isDark && styles.containerDark]}
+          contentContainerStyle={styles.scrollContent}
           keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
         >
           <TextInput
             style={[styles.titleInput, isDark && styles.titleInputDark]}
@@ -371,7 +389,12 @@ export default function NoteScreen() {
           />
 
           {/* Toolbar */}
-          <View style={[styles.toolbar, isDark && styles.toolbarDark]}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={[styles.toolbar, isDark && styles.toolbarDark]}
+            contentContainerStyle={styles.toolbarContent}
+          >
             {/* Voice Input Button */}
             <TouchableOpacity
               style={[
@@ -415,6 +438,32 @@ export default function NoteScreen() {
               )}
             </TouchableOpacity>
 
+            {/* AI Profiles Button - only show when there are matching profiles */}
+            {aiProfiles.length > 0 && (
+              <TouchableOpacity
+                style={[
+                  styles.toolbarButton,
+                  styles.aiButton,
+                  executingProfileId && styles.aiButtonExecuting,
+                ]}
+                onPress={() => {
+                  haptics.light();
+                  setShowAIProfiles(true);
+                }}
+                disabled={!!executingProfileId}
+              >
+                {executingProfileId ? (
+                  <ActivityIndicator size="small" color="#3b82f6" />
+                ) : (
+                  <FontAwesome
+                    name="bolt"
+                    size={18}
+                    color="#f59e0b"
+                  />
+                )}
+              </TouchableOpacity>
+            )}
+
             <View style={styles.toolbarDivider} />
 
             <TouchableOpacity
@@ -454,7 +503,7 @@ export default function NoteScreen() {
               <FontAwesome name="code" size={16} color={isDark ? '#9ca3af' : '#6b7280'} />
             </TouchableOpacity>
 
-            <View style={styles.toolbarSpacer} />
+            <View style={styles.toolbarDivider} />
 
             <TouchableOpacity
               style={styles.toolbarButton}
@@ -482,7 +531,7 @@ export default function NoteScreen() {
             >
               <FontAwesome name="trash-o" size={18} color="#ef4444" />
             </TouchableOpacity>
-          </View>
+          </ScrollView>
 
           <TextInput
             ref={contentInputRef}
@@ -496,6 +545,14 @@ export default function NoteScreen() {
           />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* AI Profiles Bottom Sheet */}
+      <AIProfileBottomSheet
+        visible={showAIProfiles}
+        profiles={aiProfiles}
+        onClose={() => setShowAIProfiles(false)}
+        onExecute={handleExecuteAIProfile}
+      />
     </>
   );
 }
@@ -513,6 +570,10 @@ const styles = StyleSheet.create({
   },
   containerDark: {
     backgroundColor: '#111827',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 100,
   },
   headerButton: {
     flexDirection: 'row',
@@ -562,10 +623,6 @@ const styles = StyleSheet.create({
     color: '#f9fafb',
   },
   toolbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: '#e5e7eb',
@@ -574,6 +631,12 @@ const styles = StyleSheet.create({
   toolbarDark: {
     borderColor: '#374151',
     backgroundColor: '#1f2937',
+  },
+  toolbarContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
   toolbarButton: {
     padding: 8,
@@ -586,14 +649,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(239, 68, 68, 0.15)',
     borderRadius: 20,
   },
+  aiButton: {
+    paddingHorizontal: 10,
+  },
+  aiButtonExecuting: {
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    borderRadius: 20,
+  },
   toolbarDivider: {
     width: 1,
     height: 20,
     backgroundColor: '#e5e7eb',
     marginHorizontal: 8,
-  },
-  toolbarSpacer: {
-    flex: 1,
   },
   contentInput: {
     flex: 1,

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { executeOpenAI } from '@/lib/ai/openai';
 import { executeAnthropic } from '@/lib/ai/anthropic';
@@ -8,6 +9,7 @@ import { decryptApiKey } from '@/lib/encryption';
 import { AIProviderError, MODEL_TOKEN_LIMITS } from '@/lib/ai/types';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { sanitizeAIOutput } from '@/lib/sanitize';
+import { config } from '@/lib/config';
 import type { AIProvider, OutputBehavior } from '@/types';
 
 interface ExecuteRequestBody {
@@ -23,13 +25,40 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createClient();
     const { id: profileId } = await params;
 
-    // Authenticate user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Check for Authorization header (mobile app) or use cookie-based auth (web)
+    const authHeader = request.headers.get('Authorization');
+    let supabase;
+    let user;
+
+    if (authHeader?.startsWith('Bearer ')) {
+      // Mobile app authentication via Bearer token
+      const token = authHeader.substring(7);
+      supabase = createSupabaseClient(
+        config.supabase.url,
+        config.supabase.anonKey,
+        {
+          global: {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        }
+      );
+      const { data: { user: tokenUser }, error: tokenError } = await supabase.auth.getUser(token);
+      if (tokenError || !tokenUser) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      user = tokenUser;
+    } else {
+      // Web app authentication via cookies
+      supabase = await createClient();
+      const { data: { user: cookieUser }, error: userError } = await supabase.auth.getUser();
+      if (userError || !cookieUser) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      user = cookieUser;
     }
 
     // Check rate limit (10 requests per minute per user)
